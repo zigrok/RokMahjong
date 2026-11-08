@@ -169,9 +169,10 @@ git submodule status
 git status --short
 ```
 
-`scripts/check-submodules.sh` is also intended to run in game CI. A green local
-run does not replace upstream CI, but it prevents the common "CI can't fetch this
-commit" failure.
+`scripts/check-submodules.sh` is also intended to run in game CI. It rejects
+dirty submodule worktrees, local commits on `main`/`develop`, and commits that
+are not reachable from a remote branch. A green local run does not replace
+upstream CI, but it prevents the common "CI can't fetch this commit" failure.
 
 ## Pull request checklist
 

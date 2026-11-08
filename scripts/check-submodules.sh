@@ -23,6 +23,29 @@ check_reachable() {
     return
   fi
 
+  if [ -n "$(git -C "$path" status --porcelain)" ]; then
+    echo "FAIL $label: working tree is dirty; commit or stash before pinning"
+    failures=$((failures + 1))
+    return
+  fi
+
+  local branch
+  branch=$(git -C "$path" branch --show-current)
+  case "$branch" in
+    main|develop)
+      if git -C "$path" rev-parse --verify --quiet "origin/$branch" >/dev/null; then
+        local ahead
+        ahead=$(git -C "$path" rev-list --count "origin/$branch..HEAD")
+        if [ "$ahead" -gt 0 ]; then
+          echo "FAIL $label: $ahead local commit(s) on default branch '$branch'"
+          echo "      Move them to a feature branch and open an upstream PR."
+          failures=$((failures + 1))
+          return
+        fi
+      fi
+      ;;
+  esac
+
   local sha
   sha=$(git -C "$path" rev-parse HEAD)
 
