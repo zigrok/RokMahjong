@@ -102,6 +102,7 @@ def apply_selections(face_labels: list[str] | None = None, build: bool = True) -
             "model": generation.params.get("model", ""),
             "style": generation.params.get("style", ""),
             "seed": generation.seed,
+            "prompt": generation.prompt,
             "width": width,
             "height": height,
             "createdAt": generation.created_at,
