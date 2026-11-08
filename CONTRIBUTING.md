@@ -194,7 +194,9 @@ Two separate gates apply:
 1. **Upstream gate:** the MonoGame/Forma PR passes the upstream repository's
    required CI. This is the gate that protects the shared dependencies.
 2. **Game gate:** the game repository builds and tests against the pinned
-   submodule commits, and verifies the pins are publicly reachable.
+   submodule commits, and verifies the pins are publicly reachable. The
+   `.github/workflows/submodule-pins.yml` workflow runs
+   `scripts/check-submodules.sh` on every push and pull request.
 
 Never merge an upstream change just because the game build passes locally. Never
 merge a game change whose gitlinks cannot be fetched by CI.

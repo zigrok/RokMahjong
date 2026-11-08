@@ -1,0 +1,29 @@
+name: Submodule pins
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify pinned commits are reachable
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the game repository
+        uses: actions/checkout@v4
+        with:
+          # Native MonoGame submodules are not needed for this check, and the
+          # required ones are initialized selectively below.
+          submodules: false
+
+      - name: Initialize required submodules
+        run: |
+          git submodule update --init third_party/MonoGame third_party/Forma
+          git -C third_party/Forma submodule update --init external/XamlX
+
+      - name: Verify every pin is on a remote branch
+        run: ./scripts/check-submodules.sh
