@@ -11,6 +11,10 @@ start. Desktop is the first target; native mobile is a later Forma workstream.
 **Status:** planning approved. See [`docs/plan.md`](docs/plan.md). Implementation
 starts at milestone M0.
 
+**Initial dependency baseline:** MonoGame `260e930`, Forma `8827393`, XamlX
+`0337e9b`. The pinned Forma core and `Forma.Xaml.Build` compile cleanly against
+the pinned MonoGame `DesktopGL` project.
+
 ## Requirements
 
 - .NET SDK **10.0.100 or newer** (see `global.json`)

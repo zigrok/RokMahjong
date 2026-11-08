@@ -71,7 +71,7 @@ if git -C "$path" show-ref --verify --quiet "refs/heads/$branch"; then
   die "branch '$branch' already exists in $path"
 fi
 
-git -C "$path" switch -c "$branch" "$base"
+git -C "$path" switch -c "$branch" --no-track "$base"
 
 short_sha=$(git -C "$path" rev-parse --short HEAD)
 cat <<EOF
