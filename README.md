@@ -32,8 +32,8 @@ The MonoGame and Forma dependencies are Git submodules. Do **not** use
 only needed for specific builds.
 
 ```bash
-git clone https://github.com/zigrok/rok-mahjong.git
-cd rok-mahjong
+git clone https://github.com/zigrok/RokMahjong.git
+cd RokMahjong
 
 # Required: the game framework and the UI toolkit.
 git submodule update --init third_party/MonoGame third_party/Forma

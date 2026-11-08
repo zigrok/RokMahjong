@@ -116,7 +116,7 @@ body colors without touching gameplay code.
 ### Project layout
 
 ```
-rok-mahjong/
+RokMahjong/
   RokMahjong.slnx
   Directory.Build.props
   Forma.Host.props
