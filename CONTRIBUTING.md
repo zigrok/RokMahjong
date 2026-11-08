@@ -95,8 +95,19 @@ dotnet build MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj
 Game repository:
 
 ```bash
+make test              # core, solvability and headless UI
+make test-headless     # MonoGame headless gameplay scenarios
+make gallery           # required when UI/visual output changed
 make check-submodules
-# Build/test targets are added with the M0 solution skeleton.
+```
+
+The headless runtime must be built once per machine/CI cache:
+
+```bash
+git -C third_party/MonoGame submodule update --init \
+  native/monogame/external/sdl3 \
+  native/monogame/external/faudio
+make headless-runtime
 ```
 
 ## Opening the upstream PR
@@ -174,6 +185,22 @@ dirty submodule worktrees, local commits on `main`/`develop`, and commits that
 are not reachable from a remote branch. A green local run does not replace
 upstream CI, but it prevents the common "CI can't fetch this commit" failure.
 
+## Testing expectations
+
+See [`docs/testing.md`](docs/testing.md) for the full strategy. At minimum:
+
+- **Rule or layout change:** core unit/property tests, layout validation and the
+  10,000-seed rule-agreement replay.
+- **Deal or shuffle change:** stored-solution replay through the real
+  `MahjongGame` API, plus a deadlock-state shuffle case.
+- **Gameplay or input change:** a headless scenario that uses the real input
+  router (pointer, touch, keyboard or gamepad), not a direct model call.
+- **UI change:** a Forma headless UI test and the relevant gallery scene.
+- **Bug fix:** a failing scenario that reproduces the bug before the fix, plus
+  its replay file.
+- **No retries or skipped tests** to hide flakiness. Deterministic seeds and
+  `StepFrame` are the default; quarantine and fix instead.
+
 ## Pull request checklist
 
 - [ ] Game changes are on a feature branch, not `main`.
@@ -183,10 +210,15 @@ upstream CI, but it prevents the common "CI can't fetch this commit" failure.
 - [ ] Submodule pointers point at merged commits (or a pushed feature branch,
       with the merge blocked until the upstream PR lands).
 - [ ] `./scripts/check-submodules.sh` passes.
-- [ ] Core tests, headless UI tests and render checks pass.
+- [ ] Core, solvability and headless UI tests pass.
+- [ ] Headless gameplay scenarios pass for affected features.
+- [ ] Generated/shuffled boards replay to completion through the game API.
 - [ ] New UI has `AutomationId`s and accessible names.
 - [ ] Portrait and landscape layouts were exercised.
 - [ ] Mouse, touch, keyboard and controller paths were exercised where relevant.
+- [ ] Gallery changes are reviewed, or the PR explains why no visual change is
+      expected.
+- [ ] Gameplay bug fixes include a regression scenario and replay.
 
 ## CI expectations
 

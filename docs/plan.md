@@ -132,11 +132,14 @@ RokMahjong/
     RokMahjong.Desktop/        # thin WinExe host
     RokMahjong.Content/        # MGCB content builder project
   tests/
-    RokMahjong.Core.Tests/
-    RokMahjong.Game.Tests/     # Forma.Testing headless UI/gameplay tests
-    RokMahjong.RenderTests/    # deterministic gallery/screenshot checks
+    Data/                      # layout/deck/seed corpora, scenario manifests
+    RokMahjong.TestHarness/    # scenarios, drivers, assertions, replays
+    RokMahjong.Core.Tests/     # unit + property tests (CsCheck)
+    RokMahjong.Game.Tests/     # Forma headless UI + MonoGame headless gameplay
+    RokMahjong.RenderTests/    # windowed gallery and visual regression
   tools/
     RokMahjong.TileArtGen/     # generates tile atlas + metadata
+    RokMahjong.Playtest/       # run, watch, record and replay scenarios
     gallery/                   # scene manifest, baseline frames
   assets/
     fonts/                     # OFL UI + CJK subset fonts
@@ -154,7 +157,31 @@ RokMahjong/
 - `RokMahjong.Game` references Core and Forma source projects.
 - `RokMahjong.Desktop` references `RokMahjong.Game` and owns the executable host.
 - `RokMahjong.Content` builds textures, fonts and audio through MGCB.
-- Tests reference Core and Game; headless tests use `Forma.Testing`.
+- `RokMahjong.TestHarness` is a shared scenario/driver library used by xUnit
+  tests and the Playtest CLI. It references Core and Game, never the reverse.
+- Tests reference the harness and `Forma.Testing`; headless gameplay tests also
+  use the MonoGame headless backend.
+- Test tooling: xUnit v3, CsCheck for property tests, and Stryker.NET for the
+  nightly Core mutation run.
+
+### Architecture diagrams
+
+The planned code architecture is documented with Mermaid diagrams in
+[`docs/architecture.md`](architecture.md):
+
+- system context and module dependency rules;
+- core domain model (`MahjongGame`, tiles, layouts, dealer, solver);
+- runtime frame and input pipeline;
+- screen-stack state machine;
+- board selection, fit and rotation pipeline;
+- move, undo and deadlock sequence;
+- save and asset pipelines;
+- threading, ownership and architecture invariants.
+
+The testing architecture is documented in
+[`docs/testing.md`](testing.md), including the headless/live scenario runner,
+CI tiers and failure artifacts. Diagrams are treated as part of the
+implementation: update them in the same change that moves a boundary.
 
 ### Source pins
 
@@ -482,100 +509,221 @@ This avoids duplicating focus logic in the game.
 
 ## 11. Testing and verification
 
-### Core tests
+The full strategy is in [`docs/testing.md`](testing.md). The plan commits to
+testing the **real game**, not only the model:
 
-- Free-tile rule edge cases (half-offset covers, side blocking,
-  flowers/seasons).
-- 10,000 generated deals replay their stored solution to empty.
-- Shuffle preserves remaining face counts and produces a solvable board.
-- Undo across matches and shuffles.
-- Layout validation: correct tile count, no invalid same-layer overlap, all
-  slots used.
-- Fit tests at reference sizes:
-  - 390×844 and 844×390 (phone)
-  - 768×1024 and 1024×768 (tablet)
-  - 1280×720, 1920×1080 and 2560×1440 (desktop)
-- Minimum tile size respected or prompt triggered.
+### Quality goals
 
-### Headless UI / gameplay tests (`Forma.Testing`)
+- Every generated deal and shuffle is **completable** under the exact rules the
+  game uses.
+- A solver-driven agent clears boards through the **real input path**: pointer,
+  touch, keyboard and gamepad.
+- Rule, input, UI, save and visual regressions are caught before release.
+- Every failure is reproducible from a seed, scenario and replay file.
+- Any automated scenario can be **watched** in a real window when desired.
 
-- Main menu → new game → board appears.
-- Pause/resume, settings persistence.
-- Gamepad navigation: focus a tile, match a pair, use hint/undo.
-- Touch injection: tap-tap and drag-to-match.
-- Win dialog and next level.
-- Deadlock prompt and shuffle.
+### Test layers
 
-### Render gallery
+| Layer | Scope | Runs |
+| --- | --- | --- |
+| **L0 Core** | Free rule, layouts, deals, history, scoring, serialization | Every commit, no GPU |
+| **L1 Solvability** | Stored-solution replay, shuffle replay, oracle solver, invariants | Every commit |
+| **L2 Forma headless UI** | Menus, focus, dialogs, layout, accessibility | Every commit, no GPU |
+| **L3 MonoGame headless gameplay** | Real game loop, input router, board, Forma, save/resume | Every PR, headless backend |
+| **L4 Windowed visual** | Screenshots, gallery diffs, recordings | PR/nightly, real backend |
+| **L5 Soak/perf** | Large seed sweeps, long sessions, frame budgets, mutation | Nightly/release |
 
-Deterministic scenes with seeded game state:
+### Determinism
 
-- Main menu, level select, gameplay landscape, gameplay portrait, pause,
-  settings, how-to-play, win, deadlock.
-- Sizes/scales: phone portrait, phone landscape, tablet, 1280×720, 1920×1080,
+- Seeded RNG only; no wall clock in Core.
+- `Game.StepFrame(elapsed)` drives exactly one update and one draw, with no
+  sleeping or catch-up.
+- One `IInputSource` per frame feeds both the board and Forma injection, so a
+  test cannot pass by bypassing real input.
+- Scenarios are `layout + deck + seed + actions + assertions`; failures log the
+  seed, state hash, input transcript and UI tree.
+- The same scenario runs headless for assertions and windowed for observation.
+
+### Proving boards are playable and completable
+
+1. **Generator guarantee:** the backwards dealer stores a removal order.
+2. **Rule-agreement replay:** replay that order through `MahjongGame` and assert
+   every pair is free, matches, and removes; finish with a Win result. Run for
+   every layout/deck and at least 10,000 seeds (larger nightly sweep).
+3. **Shuffle guarantee:** rebuild remaining pair units, assign them backwards,
+   store the order, replay it through the current game state.
+4. **Oracle solver:** independent DFS with a transposition table for small boards
+   and sampled states; results are `Solved`, `Deadlocked` or `Inconclusive`.
+5. **Deadlock/hint agreement:** the detector and hint service must agree with
+   legal-pair enumeration.
+6. **Solver-driven input agent:** choose a verified move, then perform it through
+   real pointer/touch/keyboard/gamepad actions until the Win screen appears.
+7. **Invariants after every move:** even face counts, history consistency, undo
+   state hash, shuffle multiset, save/load hash, free-set monotonicity.
+8. **Property-based tests** with CsCheck over random layouts, move sequences,
+   undo/redo, save points and viewports.
+9. **Nightly mutation testing** for the critical Core rules (Stryker.NET), so we
+   know the tests fail when a rule is deliberately broken.
+
+### Headless gameplay harness
+
+- MonoGame fork headless backend: `MonoGame.Framework.Native` plus the
+  `desktopheadless` `libmgruntime`, selected through `Backend=Headless`.
+- `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` are set in the process
+  environment before startup (job env, `runsettings`, or `make test-headless`).
+- One real game per process, `Game.StepFrame`, scripted input, diagnostics on
+  failure.
+- Forma’s `Forma.Testing.HeadlessInput` covers UI-only tests; the gameplay
+  fixture covers the full loop.
+- Headless tests assert state and draw-path execution, never pixels.
+- Headless runs use placeholder content, embedded fonts, disabled audio and a
+  temporary save directory; they do not require a GPU or the full Content build.
+
+### Seeing a test
+
+The `RokMahjong.Playtest` CLI runs the same scenarios outside xUnit:
+
+```bash
+# Assert headless.
+dotnet run --project tools/RokMahjong.Playtest -- \
+  --scenario solve-pagoda --seed 1234 --mode headless --json
+
+# Watch it in a real window, optionally slow and with an overlay.
+dotnet run --project tools/RokMahjong.Playtest -- \
+  --scenario solve-pagoda --seed 1234 --mode windowed --speed 0.25 --overlay
+
+# Replay a failure recorded by CI.
+dotnet run --project tools/RokMahjong.Playtest -- \
+  --replay artifacts/replays/bug-123.json --mode windowed
+```
+
+Windowed mode can record PNG frames and MP4/GIF clips. Headless mode still
+writes the replay and state dump, so a CI failure can be watched locally. The
+debug overlay shows scenario, seed, step, action, input device, remaining/free
+tiles, state hash and assertion status.
+
+### Visual regression
+
+- Real-backend gallery scenes: main menu, level select, gameplay portrait,
+  gameplay landscape, pause, settings, how-to-play, win, deadlock.
+- Reference viewports: phone portrait/landscape, tablet, 1280×720, 1920×1080,
   2× scale.
-- Baseline comparison with diff overlays, following Trace Arena's gallery
-  approach.
+- Baselines checked in; diffs and overlays uploaded as artifacts.
+- Animations covered by short recordings, not single frames.
+- Visual tests answer “does it look right?”; gameplay tests answer “does it play
+  right?”.
 
-### Performance
+### CI gates
 
-- 144-tile frame time and allocations.
-- 60 fps desktop target; measure on low-end hardware.
-- Atlas memory and load time.
+- **Fast:** build + L0/L1/L2 on every push/PR.
+- **Headless gameplay:** build/cache the headless runtime, run L3 + scenarios on
+  every PR.
+- **Visual:** windowed gallery on PR/nightly with baseline diffs.
+- **Nightly:** 10k deal sweep, solver states, soak, performance and mutation.
+- Failed jobs upload TRX, replay JSON, state dumps, UI trees, screenshots and
+  recordings.
+- No retries to hide flakiness; deterministic seeds and `StepFrame` remove most
+  timing variance.
 
 ### Manual QA
 
-- Mouse, touch, keyboard, controller.
-- Window resize and orientation change.
-- High-DPI / Retina.
-- Audio device changes, focus loss.
-- Save/resume and first-run flow.
+Still required for feel: input comfort, animation polish, audio mix, device
+ergonomics, rotation and first-run flow. Manual QA is listed per milestone.
+
+### Planned commands
+
+```bash
+make headless-runtime  # build the fork's desktopheadless library
+make test              # L0/L1/L2
+make test-headless     # L3 + scenarios
+make test-all          # all non-visual suites
+make gallery           # L4 visual baselines
+make playtest SCENARIO=solve-pagoda MODE=windowed
+```
+
+Test corpora live under `tests/Data`: layouts, deck profiles, smoke/nightly seed
+sets, scenario manifests and gallery scenes. Generated data is checked in with
+its generator seed so failures remain reproducible.
 
 ---
 
 ## 12. Milestones
 
-### M0 — Bootstrap and technical spikes
+Testing is a workstream in every milestone, not a final phase. Each milestone
+adds the tests that would have caught the bugs introduced by that milestone.
+
+### M0 — Bootstrap, backend matrix and test-harness spike
 
 - Repo, solution, pinned submodules, Forma/MonoGame source build.
 - FHTML pipeline, hot reload, blank desktop window.
+- `MonoGame.Backend.props` with `DesktopGL` and `Headless` selections.
+- Build the fork’s `desktopheadless` runtime; run the real game for ten frames
+  under `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`.
+- `RokMahjong.TestHarness` skeleton: scripted input, `StepFrame` fixture,
+  state snapshot, replay format.
+- `RokMahjong.Playtest` skeleton: run one scenario headless and windowed.
 - Spike: 144-tile board `DrawingElement` at 60 fps.
 - Spike: tile atlas generator draft, input injection, display scale.
-- **Exit:** app runs on macOS, UI hot reload works, board performance measured.
+- **Exit:** app runs; UI hot reload works; board performance measured; one
+  scenario passes headless and is watchable in a real window.
 
-### M1 — Core rules
+### M1 — Core rules and completability
 
 - Domain model, three layout families with size variants, solvable dealer, free
   rule, match, deadlock, hint, shuffle, undo, scoring, serialization.
-- Full unit-test suite.
-- **Exit:** headless simulation clears boards; all core tests green.
+- `BoardSolver` oracle with `Solved`/`Deadlocked`/`Inconclusive` results.
+- Unit and property tests (xUnit + CsCheck).
+- Layout validation against every slot set.
+- 10,000-seed rule-agreement replay through the real `MahjongGame` API.
+- Shuffle replay from fresh, mid-game and deadlocked states.
+- Deadlock/hint agreement against legal-pair enumeration.
+- **Exit:** every generated board’s stored solution clears through the game;
+  shuffles remain solvable; all core tests green.
 
-### M2 — Board rendering and interaction
+### M2 — Board rendering, interaction and headless gameplay
 
 - Tile atlas, 2.5D board, animations, hit testing, drag/tap, peek, hint/mismatch
   feedback.
 - Responsive fit, orientation selection, rotation prompt.
-- **Exit:** playable with mouse and keyboard in portrait and landscape.
+- Headless scenario suite through the real input router:
+  select, match, blocked tile, mismatch, drag-to-match, hint, undo, shuffle,
+  deadlock, win.
+- Solver-driven agent clears at least one board through real pointer and
+  keyboard actions.
+- **Exit:** playable with mouse and keyboard in portrait and landscape; headless
+  gameplay scenarios pass; board frame budget measured.
 
-### M3 — Forma shell and screens
+### M3 — Forma shell, screens and flow tests
 
 - Shell, screen stack, FHTML views, tokens/theme, HUD, level select, pause,
   settings, how-to-play, result/deadlock.
 - Persistence, resume, tutorial.
-- **Exit:** 12-level journey playable end-to-end with mouse.
+- Forma headless UI tests for menu → level select → playing → pause → settings →
+  resume → win.
+- Save/load scenario: save at a random mid-game state, reload, finish the board.
+- First-run tutorial and input-prompt assertions.
+- **Exit:** 12-level journey playable end-to-end; UI flow and resume tests pass.
 
 ### M4 — Input parity and accessibility
 
 - Input router, touch injection, gamepad menus + board navigation, prompts,
   focus rings, reduced motion, large text/high contrast, free-tile highlight.
-- **Exit:** entire game playable mouse/touch/keyboard/gamepad; automated input
-  tests pass.
+- Scenario matrix: the same solve and UI flow through mouse, touch, keyboard and
+  gamepad.
+- Responsive scenarios for phone portrait/landscape, tablet and desktop.
+- Accessibility assertions: automation ids, accessible names, focus order,
+  visible focus ring.
+- **Exit:** entire game playable on all four input devices; automated input
+  matrix passes.
 
-### M5 — Content and polish
+### M5 — Content, polish and release gates
 
 - Tune 12 levels, final tile/UI art pass, audio, particles, transitions, stats.
-- Gallery baselines, performance pass, bug fixes.
-- **Exit:** release-candidate desktop build.
+- Visual gallery baselines for every screen and reference viewport.
+- Scenario recordings, long-session soak, performance budgets, mutation report.
+- Failure artifacts and replay workflow verified in CI.
+- **Exit:** release-candidate desktop build; fast, headless, visual and nightly
+  gates green.
 
 ### M6 — Native mobile (post-v1)
 
@@ -583,10 +731,12 @@ Deterministic scenes with seeded game state:
   references, GLES effect validation.
 - Touch, safe areas, suspend/resume, orientation.
 - DynamicText mobile validation or SpriteFont fallback.
-- **Exit:** device matrix passes; packaged builds.
+- Device-level scenarios for pause/resume, save on suspend and orientation.
+- **Exit:** device matrix passes; packaged builds; mobile scenarios green.
 
-Rough desktop v1 effort: **3–4 focused weeks**, plus **2–4 weeks** for native
-mobile depending on Forma mobile issues.
+Rough desktop v1 effort: **4–6 focused weeks** including the test harness,
+headless gameplay suite and visual gallery, plus **2–4 weeks** for native mobile
+depending on Forma mobile issues.
 
 ---
 
@@ -597,6 +747,8 @@ mobile depending on Forma mobile issues.
 - Custom-control keyboard hooks (`KeyPressed` / `KeyReleased` protected
   internal).
 - Tests for custom focusable drawing controls.
+- Use the existing `Forma.Testing` / `HeadlessInput` package for L2 UI tests;
+  upstream fixes only if a gap blocks the board or scenario harness.
 - Phase 2: mobile TFM/build support, GLES validation, safe-area/touch helpers if
   needed.
 - No fork of Forma's rendering model; the board uses the public
@@ -604,8 +756,10 @@ mobile depending on Forma mobile issues.
 
 ### MonoGame fork
 
-- Desktop v1 needs no fork changes beyond using `AllowHighDpi` and the existing
-  input stack.
+- Use the existing `Game.StepFrame` and headless backend for deterministic
+  gameplay tests; no fork change is required for v1.
+- Desktop v1 otherwise needs no fork changes beyond using `AllowHighDpi` and the
+  existing input stack.
 - Phase 2: only if Android/iOS safe-area, orientation or activity lifecycle gaps
   appear.
 
@@ -630,7 +784,14 @@ Every upstream change follows the submodule workflow in `CONTRIBUTING.md`:
 | Per-frame vector tessellation too slow | Pre-baked tile atlas; only overlays use paths; profile early in M0 |
 | Gamepad navigation feels clumsy on 144 tiles | Free-tile spatial cursor, visible focus ring, hint moves cursor, stick as virtual pointer |
 | Rotation mid-game makes tiles too small | Orientation-specific layouts, auto-fit, explicit prompt, no silent state loss |
-| Unsolvable deals/shuffles | Backwards generator + replay verification; shuffle retry; deadlock detection |
+| Unsolvable deals/shuffles | Backwards generator + rule-agreement replay through the real game; shuffle retry; deadlock detection |
+| Tests pass but real input fails | One `IInputSource` feeds both the board and Forma injection; solver agent uses real pointer/keyboard/touch/gamepad actions |
+| Headless runtime build is slow/fragile | Cache by MonoGame/native commit; dedicated headless job; fast tests stay GPU-free; document the SDL dummy-driver setup |
+| Headless cannot see pixels | Separate windowed gallery and recordings; headless assertions are state-only by design |
+| Solver too slow on 144 tiles | Stored generator/shuffle solutions for full boards; oracle on 36/72 tiles and sampled states with a budget |
+| Scenario DSL drifts from the real game | DSL only emits input actions and assertions; it never mutates `MahjongGame` directly |
+| Visual baselines flaky across GPUs | Pin the baseline OS/backend; use diff thresholds; review baselines on the same runner image |
+| Flaky tests hidden by retries | Deterministic seeds + `StepFrame`; non-parallel headless collection; quarantine and fix, never retry-to-green |
 | Save corruption / interrupted mobile suspend | Atomic writes, versioned schema, backup, save on pause/deactivate |
 | Scope creep (tray, special tiles, daily) | v1 is classic only; `IMatchRule`/`TileBehavior` seams left for later modes |
 
@@ -638,15 +799,26 @@ Every upstream change follows the submodule workflow in `CONTRIBUTING.md`:
 
 ## 15. Immediate next steps
 
-1. Initialize the repo, add pinned MonoGame/Forma submodules, and create the
-   solution/project skeleton.
+1. Create the solution/project skeleton and `MonoGame.Backend.props` with
+   `DesktopGL` and `Headless`.
 2. Get Forma + FHTML building and rendering a blank desktop shell with hot
    reload.
-3. Implement the three layout families and the core free-rule/deal tests.
-4. Prototype the 144-tile board renderer with a placeholder atlas and measure
+3. Build the `desktopheadless` runtime and prove the real game runs ten frames
+   under `StepFrame`.
+4. Stand up `RokMahjong.TestHarness` and `RokMahjong.Playtest` with one scenario
+   that runs headless and is watchable windowed.
+5. Implement the three layout families, core rules and the solvability/oracle
+   test suite.
+6. Prototype the 144-tile board renderer with a placeholder atlas and measure
    frame time.
-5. Build the tile atlas tool and replace placeholders.
-6. Start the screen shell and 12-level content.
+7. Add the headless gameplay scenarios for tap, drag, hint, undo and shuffle.
+8. Build the tile atlas tool and replace placeholders.
+9. Start the screen shell and 12-level content, with UI flow tests from the
+   first screen.
+
+The architecture and testing diagrams are already checked in at
+[`docs/architecture.md`](architecture.md) and
+[`docs/testing.md`](testing.md); keep them current as implementation lands.
 
 Two small choices remain open:
 

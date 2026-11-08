@@ -5,12 +5,16 @@
 ## Verification
 
 - [ ] Build passes
-- [ ] Core tests pass
-- [ ] Headless UI/gameplay tests pass
+- [ ] Core and solvability tests pass
+- [ ] Generated/shuffled boards replay to completion through the game API
+- [ ] Headless UI tests pass
+- [ ] Headless gameplay scenarios pass through the real input path
 - [ ] Render gallery has only intended changes
 - [ ] Tested at phone portrait and landscape sizes
 - [ ] Tested at desktop sizes
 - [ ] Input tested: mouse, touch, keyboard, controller (where relevant)
+- [ ] Bug fixes include a regression scenario and replay
+- [ ] No tests were skipped or retried to hide flakiness
 
 ## Submodule changes
 
