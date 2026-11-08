@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help submodules submodule-status check-submodules
+.PHONY: help submodules submodule-status check-submodules progress progress-desktop goal-gate
 
 help:
 	@echo "Rok Mahjong repository targets"
@@ -8,6 +8,9 @@ help:
 	@echo "  make submodules         Initialize MonoGame, Forma and XamlX"
 	@echo "  make submodule-status   Show recursive submodule state"
 	@echo "  make check-submodules   Verify pinned commits are remotely reachable"
+	@echo "  make progress           Show overall plan checklist progress"
+	@echo "  make progress-desktop   Show M0-M5 desktop checklist progress"
+	@echo "  make goal-gate          Re-read desktop goal evidence"
 	@echo ""
 	@echo "Build/test targets are added with the M0 solution skeleton."
 
@@ -20,3 +23,12 @@ submodule-status:
 
 check-submodules:
 	./scripts/check-submodules.sh
+
+progress:
+	./tools/plan-progress.sh docs/plan.md
+
+progress-desktop:
+	./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5
+
+goal-gate:
+	./tools/goal-gate.sh

@@ -15,6 +15,8 @@
 - [ ] Input tested: mouse, touch, keyboard, controller (where relevant)
 - [ ] Bug fixes include a regression scenario and replay
 - [ ] No tests were skipped or retried to hide flakiness
+- [ ] `docs/plan.md` checkboxes updated in this change
+- [ ] Goal evidence written to `artifacts/goal/` when closing the desktop goal
 
 ## Submodule changes
 

@@ -4,6 +4,12 @@
 **Working title:** Rok Mahjong.
 **Default theme:** Jade Garden (proposal; Tea House and Midnight Lotus remain alternatives).
 
+> **Live progress:** this plan is checklist-driven. Run
+> `./tools/plan-progress.sh docs/plan.md` for status. Mark work in progress with
+> `- [~]` and complete it with `- [x]` in the **same change** that does the work.
+> The `/go` desktop goal uses the M0–M5 phases and the
+> **Desktop v1 acceptance** checklist as its completion gate.
+
 Rok Mahjong is a relaxing mahjong solitaire matching game built with the
 `zigrok/MonoGame` fork and the `zigrok/Forma` UI toolkit. It targets desktop first,
 with a responsive layout and an input model designed for portrait/landscape,
@@ -123,6 +129,10 @@ RokMahjong/
   global.json
   NuGet.config
   Makefile
+  AGENTS.md
+  .opencode/
+    goals/desktop-v1.md    # /go completion contract
+    plugins/rok-goal/      # project /go command
   third_party/
     MonoGame/          # pinned zigrok/MonoGame submodule
     Forma/             # pinned zigrok/Forma submodule (+ XamlX)
@@ -141,6 +151,8 @@ RokMahjong/
     RokMahjong.TileArtGen/     # generates tile atlas + metadata
     RokMahjong.Playtest/       # run, watch, record and replay scenarios
     gallery/                   # scene manifest, baseline frames
+    plan-progress.sh           # checklist progress reporter
+    goal-gate.sh               # re-reads desktop goal evidence
   assets/
     fonts/                     # OFL UI + CJK subset fonts
     audio/                     # music and SFX
@@ -654,85 +666,122 @@ adds the tests that would have caught the bugs introduced by that milestone.
 
 ### M0 — Bootstrap, backend matrix and test-harness spike
 
-- Repo, solution, pinned submodules, Forma/MonoGame source build.
-- FHTML pipeline, hot reload, blank desktop window.
-- `MonoGame.Backend.props` with `DesktopGL` and `Headless` selections.
-- Build the fork’s `desktopheadless` runtime; run the real game for ten frames
-  under `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`.
-- `RokMahjong.TestHarness` skeleton: scripted input, `StepFrame` fixture,
-  state snapshot, replay format.
-- `RokMahjong.Playtest` skeleton: run one scenario headless and windowed.
-- Spike: 144-tile board `DrawingElement` at 60 fps.
-- Spike: tile atlas generator draft, input injection, display scale.
-- **Exit:** app runs; UI hot reload works; board performance measured; one
-  scenario passes headless and is watchable in a real window.
+- [x] Repository initialized with pinned MonoGame and Forma submodules.
+- [x] Forma/MonoGame source build and Forma XamlX verified.
+- [x] Submodule feature-branch/PR workflow and pin-check CI added.
+- [x] Plan, architecture diagrams and testing strategy documented.
+- [ ] Solution/project skeleton created (`RokMahjong.slnx` and first-party
+      projects).
+- [ ] `MonoGame.Backend.props` supports `DesktopGL` and `Headless`.
+- [ ] FHTML pipeline, Debug hot reload and a blank desktop window run.
+- [ ] `desktopheadless` runtime builds and the real game runs ten frames under
+      `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`.
+- [ ] `RokMahjong.TestHarness` skeleton: scripted input, `StepFrame` fixture,
+      state snapshot and replay format.
+- [ ] `RokMahjong.Playtest` skeleton runs one scenario headless and windowed.
+- [ ] Spike: 144-tile board `DrawingElement` at 60 fps.
+- [ ] Spike: tile atlas generator draft, input injection and display scale.
+- [ ] **M0 exit gate:** app runs, UI hot reload works, board performance is
+      measured, and one scenario passes headless and is watchable in a real
+      window.
 
 ### M1 — Core rules and completability
 
-- Domain model, three layout families with size variants, solvable dealer, free
-  rule, match, deadlock, hint, shuffle, undo, scoring, serialization.
-- `BoardSolver` oracle with `Solved`/`Deadlocked`/`Inconclusive` results.
-- Unit and property tests (xUnit + CsCheck).
-- Layout validation against every slot set.
-- 10,000-seed rule-agreement replay through the real `MahjongGame` API.
-- Shuffle replay from fresh, mid-game and deadlocked states.
-- Deadlock/hint agreement against legal-pair enumeration.
-- **Exit:** every generated board’s stored solution clears through the game;
-  shuffles remain solvable; all core tests green.
+- [ ] Domain model: tiles, half-unit coordinates, layouts, faces and match
+      groups.
+- [ ] Three layout families with size variants (Lotus, Pagoda, Turtle).
+- [ ] Backwards solvable dealer with stored removal order and verification.
+- [ ] Free rule, selection, matching, deadlock detection, hint, shuffle, undo,
+      scoring and serialization.
+- [ ] `BoardSolver` oracle with `Solved`/`Deadlocked`/`Inconclusive` results.
+- [ ] Unit and property tests (xUnit + CsCheck).
+- [ ] Layout validation against every slot set.
+- [ ] 10,000-seed rule-agreement replay through the real `MahjongGame` API.
+- [ ] Shuffle replay from fresh, mid-game and deadlocked states.
+- [ ] Deadlock/hint agreement against legal-pair enumeration.
+- [ ] **M1 exit gate:** every generated board’s stored solution clears through
+      the game, shuffles remain solvable, and all core tests are green.
 
 ### M2 — Board rendering, interaction and headless gameplay
 
-- Tile atlas, 2.5D board, animations, hit testing, drag/tap, peek, hint/mismatch
-  feedback.
-- Responsive fit, orientation selection, rotation prompt.
-- Headless scenario suite through the real input router:
-  select, match, blocked tile, mismatch, drag-to-match, hint, undo, shuffle,
-  deadlock, win.
-- Solver-driven agent clears at least one board through real pointer and
-  keyboard actions.
-- **Exit:** playable with mouse and keyboard in portrait and landscape; headless
-  gameplay scenarios pass; board frame budget measured.
+- [ ] Tile atlas, 2.5D board, painter’s order, animations, hit testing, drag/tap,
+      peek and hint/mismatch feedback.
+- [ ] Responsive fit, orientation selection and rotation prompt.
+- [ ] Headless scenario suite through the real input router: select, match,
+      blocked tile, mismatch, drag-to-match, hint, undo, shuffle, deadlock and
+      win.
+- [ ] Solver-driven agent clears at least one board through real pointer and
+      keyboard actions.
+- [ ] **M2 exit gate:** playable with mouse and keyboard in portrait and
+      landscape, headless gameplay scenarios pass, and the board frame budget is
+      measured.
 
 ### M3 — Forma shell, screens and flow tests
 
-- Shell, screen stack, FHTML views, tokens/theme, HUD, level select, pause,
-  settings, how-to-play, result/deadlock.
-- Persistence, resume, tutorial.
-- Forma headless UI tests for menu → level select → playing → pause → settings →
-  resume → win.
-- Save/load scenario: save at a random mid-game state, reload, finish the board.
-- First-run tutorial and input-prompt assertions.
-- **Exit:** 12-level journey playable end-to-end; UI flow and resume tests pass.
+- [ ] Shell, screen stack, FHTML views, tokens/theme, HUD, level select, pause,
+      settings, how-to-play, result and deadlock screens.
+- [ ] Persistence, resume and first-run tutorial.
+- [ ] Forma headless UI tests for menu → level select → playing → pause →
+      settings → resume → win.
+- [ ] Save/load scenario: save at a random mid-game state, reload and finish the
+      board.
+- [ ] First-run tutorial and input-prompt assertions.
+- [ ] **M3 exit gate:** 12-level journey playable end-to-end; UI flow and resume
+      tests pass.
 
 ### M4 — Input parity and accessibility
 
-- Input router, touch injection, gamepad menus + board navigation, prompts,
-  focus rings, reduced motion, large text/high contrast, free-tile highlight.
-- Scenario matrix: the same solve and UI flow through mouse, touch, keyboard and
-  gamepad.
-- Responsive scenarios for phone portrait/landscape, tablet and desktop.
-- Accessibility assertions: automation ids, accessible names, focus order,
-  visible focus ring.
-- **Exit:** entire game playable on all four input devices; automated input
-  matrix passes.
+- [ ] Input router, touch injection, gamepad menus and board navigation, prompts
+      and focus rings.
+- [ ] Reduced motion, large text, high contrast and free-tile highlight.
+- [ ] Scenario matrix: the same solve and UI flow through mouse, touch, keyboard
+      and gamepad.
+- [ ] Responsive scenarios for phone portrait/landscape, tablet and desktop.
+- [ ] Accessibility assertions: automation ids, accessible names, focus order
+      and visible focus ring.
+- [ ] **M4 exit gate:** entire game playable on all four input devices;
+      automated input matrix passes.
 
 ### M5 — Content, polish and release gates
 
-- Tune 12 levels, final tile/UI art pass, audio, particles, transitions, stats.
-- Visual gallery baselines for every screen and reference viewport.
-- Scenario recordings, long-session soak, performance budgets, mutation report.
-- Failure artifacts and replay workflow verified in CI.
-- **Exit:** release-candidate desktop build; fast, headless, visual and nightly
-  gates green.
+- [ ] Tune 12 levels and the first-run journey pacing.
+- [ ] Final tile/UI art pass, audio, particles, transitions and stats.
+- [ ] Visual gallery baselines for every screen and reference viewport.
+- [ ] Scenario recordings, long-session soak, performance budgets and mutation
+      report.
+- [ ] Failure artifacts and replay workflow verified in CI.
+- [ ] **M5 exit gate:** release-candidate desktop build; fast, headless, visual
+      and nightly gates green.
 
-### M6 — Native mobile (post-v1)
+### Desktop v1 acceptance
 
-- Forma mobile build: `net10.0-android` / `net10.0-ios`, MonoGame Android/iOS
-  references, GLES effect validation.
-- Touch, safe areas, suspend/resume, orientation.
-- DynamicText mobile validation or SpriteFont fallback.
-- Device-level scenarios for pause/resume, save on suspend and orientation.
-- **Exit:** device matrix passes; packaged builds; mobile scenarios green.
+This is the goal’s release checklist. It is intentionally separate from the
+phase checklists so the goal gate can require both.
+
+- [ ] `dotnet run --project src/RokMahjong.Desktop` opens the main menu.
+- [ ] All 12 levels can be started and completed through the real UI.
+- [ ] Mouse, touch, keyboard and gamepad each complete a solver scenario.
+- [ ] Portrait and landscape layouts are playable at phone and desktop sizes.
+- [ ] Hint, undo, shuffle, deadlock recovery and restart work in a real session.
+- [ ] Save/Continue resumes the exact board, score and history.
+- [ ] Headless solver scenarios clear every level in the smoke seed set.
+- [ ] `make test-all` is green.
+- [ ] `make gallery` has no unintended visual diffs.
+- [ ] Release build has 0 warnings and 0 errors.
+- [ ] `./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict`
+      exits 0.
+- [ ] `artifacts/goal/desktop-ready.md` records the build/run commands,
+      scenario evidence and any known limitations.
+
+### M6 — Native mobile (post-v1, out of scope for `/go`)
+
+- [ ] Forma mobile build: `net10.0-android` / `net10.0-ios`, MonoGame
+      Android/iOS references and GLES effect validation.
+- [ ] Touch, safe areas, suspend/resume and orientation.
+- [ ] DynamicText mobile validation or SpriteFont fallback.
+- [ ] Device-level scenarios for pause/resume, save on suspend and orientation.
+- [ ] **M6 exit gate:** device matrix passes, packaged builds and mobile
+      scenarios green.
 
 Rough desktop v1 effort: **4–6 focused weeks** including the test harness,
 headless gameplay suite and visual gallery, plus **2–4 weeks** for native mobile
@@ -819,6 +868,12 @@ Every upstream change follows the submodule workflow in `CONTRIBUTING.md`:
 The architecture and testing diagrams are already checked in at
 [`docs/architecture.md`](architecture.md) and
 [`docs/testing.md`](testing.md); keep them current as implementation lands.
+
+To run the desktop goal end-to-end, use `/go`. It reads
+[`.opencode/goals/desktop-v1.md`](../.opencode/goals/desktop-v1.md), sets a
+120-turn budget and delegates to the opencode-goal plugin’s `/goal` command.
+Check progress with `make progress`; the release gate is
+`./tools/goal-gate.sh`.
 
 Two small choices remain open:
 
