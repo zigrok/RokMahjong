@@ -54,7 +54,7 @@ public sealed class GameShell
     private bool _resultShown;
     private int _automationCounter;
 
-    public GameShell(UIContext ui, SaveStore store, UIFont bodyFont, UIFont titleFont, UIFont tileFont)
+    public GameShell(UIContext ui, SaveStore store, UIFont bodyFont, UIFont titleFont, UIFont tileFont, TileAtlas? tileAtlas = null)
     {
         _ui = ui;
         _store = store;
@@ -69,7 +69,7 @@ public sealed class GameShell
             Color = new Color(8, 32, 27),
             MouseFilter = MouseFilter.Ignore,
         };
-        _boardView = new MahjongBoardView(tileFont)
+        _boardView = new MahjongBoardView(tileFont, tileAtlas)
         {
             Position = Vector2.Zero,
             Size = new Vector2(1280, 800),

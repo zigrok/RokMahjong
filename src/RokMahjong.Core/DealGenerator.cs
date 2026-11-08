@@ -22,7 +22,7 @@ public static class DealGenerator
             var occupied = new bool[layout.TileCount];
             for (var i = 0; i < occupied.Length; i++) occupied[i] = true;
 
-            var pairs = BuildPairUnits(deck);
+            var pairs = Pairing.BuildPairUnits(deck.AllFaces) ?? throw new InvalidOperationException("Deck cannot be paired.");
             rng.Shuffle(pairs);
             var pairIndex = 0;
             var solution = new List<(int First, int Second)>();
@@ -50,9 +50,9 @@ public static class DealGenerator
                     b = free[(free.IndexOf(a) + 1) % free.Count];
                 }
 
-                var face = pairs[pairIndex++];
-                allocated[a] = face;
-                allocated[b] = face;
+                var pair = pairs[pairIndex++];
+                allocated[a] = pair.First;
+                allocated[b] = pair.Second;
                 occupied[a] = false;
                 occupied[b] = false;
                 solution.Add((a, b));
@@ -91,12 +91,5 @@ public static class DealGenerator
         return alive.All(tile => tile.Removed);
     }
 
-    private static List<TileFace> BuildPairUnits(DeckProfile deck)
-    {
-        var pairs = new List<TileFace>(deck.PairCount);
-        foreach (var face in deck.Faces)
-            for (var i = 0; i < deck.CopiesPerFace / 2; i++)
-                pairs.Add(face);
-        return pairs;
-    }
+
 }

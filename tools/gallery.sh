@@ -10,12 +10,18 @@ dotnet build RokMahjong.slnx -v:minimal >/dev/null
 capture() {
   local screen=$1
   local file=$2
-  dotnet run --project src/RokMahjong.Desktop --no-build -- --screenshot "$out/$file" --screen "$screen" >/dev/null
+  local level=${3:-}
+  if [ -n "$level" ]; then
+    dotnet run --project src/RokMahjong.Desktop --no-build -- --screenshot "$out/$file" --screen "$screen" --level "$level" >/dev/null
+  else
+    dotnet run --project src/RokMahjong.Desktop --no-build -- --screenshot "$out/$file" --screen "$screen" >/dev/null
+  fi
 }
 
 capture menu menu.png
 capture levels levels.png
 capture game game.png
+capture game game-144.png 9
 capture settings settings.png
 capture howto howto.png
 
@@ -23,7 +29,7 @@ python3 - <<'PY'
 from PIL import Image
 from pathlib import Path
 out = Path('artifacts/gallery')
-for name in ['menu', 'levels', 'game', 'settings', 'howto']:
+for name in ['menu', 'levels', 'game', 'game-144', 'settings', 'howto']:
     path = out / f'{name}.png'
     image = Image.open(path).convert('RGB')
     assert image.size[0] >= 1280 and image.size[1] >= 800, (path, image.size)

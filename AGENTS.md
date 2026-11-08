@@ -42,8 +42,7 @@ current as you work.
 
 ## Commands
 
-These are the target commands. Build/test targets land with the M0 solution
-skeleton; the submodule and plan commands work today.
+Run from the repository root.
 
 ```bash
 # Repository / submodules
@@ -51,29 +50,27 @@ make submodules                 # init MonoGame, Forma and XamlX
 make submodule-status           # recursive status
 make check-submodules           # pins are reachable from remote branches
 
-# Plan / goal
+# Plan
 ./tools/plan-progress.sh docs/plan.md
 ./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict
 ./tools/plan-progress.sh docs/plan.md --section "Desktop v1 acceptance" --strict
 
-# Build / run (target; M0+)
-dotnet build RokMahjong.slnx
-dotnet run --project src/RokMahjong.Desktop
+# Build / play / watch
+make build
+make run
+make watch LEVEL=1             # auto-solve in a real window
+make tiles                     # regenerate the 42-face tile atlas
 
-# Tests (target; M0+)
-make test                       # core, solvability, Forma headless UI
-make test-headless              # MonoGame headless gameplay scenarios
-make test-all                   # all non-visual suites
-make gallery                    # windowed visual baselines
-make headless-runtime           # build the fork's desktopheadless runtime
-make playtest SCENARIO=solve-pagoda MODE=windowed
+# Tests and visuals
+make test                      # core + game/UI tests
+make test-all                  # whole solution
+make playtest LEVEL=1 DEVICE=mouse
+make gallery
 ```
 
-Headless runs need the dummy drivers in the **process** environment:
-
-```bash
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy make test-headless
-```
+The v1 headless harness is pure C# (`ScriptedInputSource` → `GameInputRouter`
+→ `BoardController` → `MahjongGame`), so it needs no native dummy drivers. The
+native MonoGame `desktopheadless`/`Game.StepFrame` path is post-v1.
 
 ---
 

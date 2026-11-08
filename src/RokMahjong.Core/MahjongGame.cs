@@ -118,16 +118,8 @@ public sealed class MahjongGame
         var remaining = _tiles.Where(tile => !tile.Removed).ToList();
         if (remaining.Count < 2) return new ShuffleResult(false, 0);
 
-        var counts = new Dictionary<TileFace, int>();
-        foreach (var tile in remaining)
-            counts[tile.Face] = counts.TryGetValue(tile.Face, out var count) ? count + 1 : 1;
-
-        var pairUnits = new List<TileFace>();
-        foreach (var (face, count) in counts)
-        {
-            if (count % 2 != 0) return new ShuffleResult(false, 0);
-            for (var i = 0; i < count / 2; i++) pairUnits.Add(face);
-        }
+        var pairUnits = Pairing.BuildPairUnits(remaining.Select(tile => tile.Face));
+        if (pairUnits is null) return new ShuffleResult(false, 0);
         rng.Shuffle(pairUnits);
 
         var occupied = new bool[remaining.Count];
@@ -150,9 +142,9 @@ public sealed class MahjongGame
             var a = free[rng.Next(free.Count)];
             var b = free[rng.Next(free.Count)];
             if (a == b) b = free[(free.IndexOf(a) + 1) % free.Count];
-            var face = pairUnits[pairIndex++];
-            assignments[a] = face;
-            assignments[b] = face;
+            var pair = pairUnits[pairIndex++];
+            assignments[a] = pair.First;
+            assignments[b] = pair.Second;
             solution.Add((remaining[a].Id, remaining[b].Id));
             occupied[a] = false;
             occupied[b] = false;

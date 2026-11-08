@@ -3,7 +3,7 @@ SHELL := /bin/bash
 LEVEL ?= 1
 DEVICE ?= mouse
 
-.PHONY: help submodules submodule-status check-submodules progress progress-desktop build run watch test test-core test-game test-all playtest gallery
+.PHONY: help submodules submodule-status check-submodules progress progress-desktop build run watch tiles test test-core test-game test-all playtest gallery
 
 help:
 	@echo "Rok Mahjong repository targets"
@@ -16,6 +16,7 @@ help:
 	@echo "  make build              Build the solution"
 	@echo "  make run                Run the desktop game"
 	@echo "  make watch LEVEL=1      Watch an auto-solved level in a real window"
+	@echo "  make tiles              Regenerate the 42-face tile atlas"
 	@echo "  make test               Run core and game tests"
 	@echo "  make test-all           Run the whole solution test suite"
 	@echo "  make playtest LEVEL=1 DEVICE=mouse"
@@ -45,6 +46,9 @@ run:
 
 watch:
 	dotnet run --project src/RokMahjong.Desktop -- --autoplay $(LEVEL)
+
+tiles:
+	dotnet run --project tools/RokMahjong.TileArtGen
 
 test: test-core test-game
 

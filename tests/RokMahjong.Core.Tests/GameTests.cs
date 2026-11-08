@@ -55,7 +55,7 @@ public class GameTests
             new TileCoord(0, 0, 0), new TileCoord(2, 0, 0),
             new TileCoord(0, 2, 0), new TileCoord(2, 2, 0),
         }, false);
-        var deck = new DeckProfile("test", new[] { new TileFace(MatchGroup.Characters, 1, "C1") }, 2);
+        var deck = new DeckProfile("test", new[] { new DeckEntry(new TileFace(MatchGroup.Characters, 1, "C1"), 2) });
         var faces = new[]
         {
             new TileFace(MatchGroup.Characters, 1, "C1"),

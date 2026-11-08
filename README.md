@@ -19,6 +19,8 @@ post-v1 backlog.
 
 ![Rok Mahjong gameplay](docs/images/game.png)
 
+![Rok Mahjong full 144-tile board](docs/images/game-144.png)
+
 ## Play
 
 ```bash
@@ -90,8 +92,11 @@ git submodule status --recursive
 | `tests/RokMahjong.Core.Tests` | Rules, layouts, solvability, 10k-seed replay |
 | `tests/RokMahjong.Game.Tests` | Real input-router gameplay + Forma headless UI |
 | `tools/RokMahjong.Playtest` | Headless level solver with JSON output |
+| `tools/RokMahjong.TileArtGen` | SkiaSharp generator for the 42-face tile atlas |
 | `tools/gallery.sh` | Windowed screenshot smoke check |
 | `tools/plan-progress.sh` | Checklist progress reporter |
+| `assets/art/` | Generated tile atlas PNG + metadata |
+| `assets/fonts/` | OFL CJK subset used only by the tile generator |
 | `docs/` | Plan, architecture, testing strategy, goal prompt and screenshots |
 | `AGENTS.md` | Project rules and definition of done for coding agents |
 | `third_party/` | Pinned MonoGame and Forma submodules |
@@ -106,6 +111,7 @@ make test               # core + game tests
 make test-all           # whole solution
 make playtest LEVEL=1 DEVICE=mouse
 make watch LEVEL=1      # auto-solve a level in a real window
+make tiles              # regenerate the 42-face tile atlas
 make gallery            # capture and validate screenshots
 make check-submodules   # verify pins are reachable
 ```
@@ -149,7 +155,10 @@ make gallery
 ```
 
 `RokMahjong.Playtest` prints a JSON result with the level, device, status,
-moves and score. Full details: [`docs/testing.md`](docs/testing.md).
+moves and score. The tile atlas is generated from vector art by
+`tools/RokMahjong.TileArtGen` and checked in, so the game runtime needs no art
+tool. `make tiles` regenerates `assets/art/tile-atlas.png` and its metadata.
+Full details: [`docs/testing.md`](docs/testing.md).
 
 ## Working on MonoGame or Forma
 

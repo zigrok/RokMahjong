@@ -149,8 +149,12 @@ RokMahjong/
     RokMahjong.Game.Tests/     # real input-router gameplay + Forma headless UI
   tools/
     RokMahjong.Playtest/       # headless level solver with JSON output
+    RokMahjong.TileArtGen/     # SkiaSharp 42-face atlas generator
     gallery.sh                 # windowed screenshot smoke check
     plan-progress.sh           # checklist progress reporter
+  assets/
+    art/                       # generated tile-atlas.png + metadata
+    fonts/                     # OFL CJK subset for the generator
   docs/
     plan.md
     architecture.md
@@ -693,8 +697,8 @@ adds the tests that would have caught the bugs introduced by that milestone.
 
 ### M2 — Board interaction and headless gameplay
 
-- [x] 2.5D vector board with painter’s order, selection lift, hint pulse,
-      hit testing and drag/tap matching.
+- [x] 2.5D tile-atlas board with painter’s order, selection lift, hint
+      pulse, hit testing and drag/tap matching.
 - [x] Responsive fit and layout for portrait and landscape rectangles.
 - [x] Headless scenario suite through the real input router: select, match,
       blocked tile, mismatch, drag, hint, undo, shuffle, win.
@@ -730,7 +734,8 @@ adds the tests that would have caught the bugs introduced by that milestone.
 ### M5 — Content, polish and release gates
 
 - [x] 12 levels across the three layout families.
-- [x] First-pass vector tile art, jade UI theme, hint pulse and selection lift.
+- [x] Generated 42-face tile atlas, jade UI theme, hint pulse and selection
+      lift.
 - [x] Gallery smoke renders menu, level select, gameplay, settings and how-to-
       play screens.
 - [x] 10,000-deal soak plus the full core/game/UI suite.
@@ -756,7 +761,7 @@ adds the tests that would have caught the bugs introduced by that milestone.
 ### Post-v1 backlog
 
 - [ ] FHTML/FCSS authored views and Debug hot reload.
-- [ ] Pre-baked tile texture atlas / SVG art pipeline and alternate themes.
+- [ ] Alternate tile themes and an SVG/community art pipeline.
 - [ ] Native MonoGame `desktopheadless` runtime and `Game.StepFrame` gameplay
       tests.
 - [ ] Audio, particles, transitions and a first-run tutorial overlay.
@@ -846,6 +851,7 @@ make build
 make run
 make test-all
 make playtest LEVEL=1 DEVICE=mouse
+make tiles
 make gallery
 ```
 

@@ -26,12 +26,15 @@ public sealed class MahjongBoardView : DrawingElement
 
     private BoardController? _controller;
 
-    public MahjongBoardView(UIFont tileFont)
+    public MahjongBoardView(UIFont tileFont, TileAtlas? atlas = null)
     {
         TileFont = tileFont;
+        Atlas = atlas;
         IsHitTestVisible = false;
         MouseFilter = MouseFilter.Ignore;
     }
+
+    public TileAtlas? Atlas { get; set; }
 
     public UIFont TileFont { get; set; }
     public TimeSpan Now { get; set; }
@@ -65,26 +68,35 @@ public sealed class MahjongBoardView : DrawingElement
             var isHint = tile.Id == _controller.HintFirstTileId || tile.Id == _controller.HintSecondTileId;
             if (isSelected && !ReducedMotion) rect.Offset(-3, -6);
 
-            Fill(context, new Rectangle(rect.X + 4, rect.Y + 6, rect.Width, rect.Height), Shadow);
-            Fill(context, new Rectangle(rect.X + 3, rect.Y + 4, rect.Width, rect.Height), Side);
+            if (Atlas is not null && Atlas.TryGetSourceRect(tile.Face, out var source))
+            {
+                var destination = Atlas.GetDestinationRect(rect);
+                var tint = HighlightFreeTiles && !free ? new Color(205, 207, 200) : Color.White;
+                context.DrawImage(Atlas.Texture, source, destination, Matrix.CreateTranslation(destination.X, destination.Y, 0), tint);
+            }
+            else
+            {
+                Fill(context, new Rectangle(rect.X + 4, rect.Y + 6, rect.Width, rect.Height), Shadow);
+                Fill(context, new Rectangle(rect.X + 3, rect.Y + 4, rect.Width, rect.Height), Side);
 
-            var faceColor = isSelected ? FaceSelected : free ? Face : FaceBlocked;
-            if (HighlightFreeTiles && !free) faceColor = Color.Lerp(faceColor, new Color(180, 186, 178), 0.35f);
-            Fill(context, rect, faceColor);
-            StrokeRect(context, rect, Border, 1.5f);
+                var faceColor = isSelected ? FaceSelected : free ? Face : FaceBlocked;
+                if (HighlightFreeTiles && !free) faceColor = Color.Lerp(faceColor, new Color(180, 186, 178), 0.35f);
+                Fill(context, rect, faceColor);
+                StrokeRect(context, rect, Border, 1.5f);
+
+                var label = tile.Face.Label;
+                var size = context.MeasureText(TileFont, label);
+                var textPosition = new Vector2(
+                    rect.X + (rect.Width - size.X) / 2f,
+                    rect.Y + (rect.Height - size.Y) / 2f - 1);
+                context.DrawText(TileFont, label, textPosition, FaceColor(tile.Face));
+            }
 
             if (isSelected || isFocused || isHint)
             {
                 var color = isHint ? HintColor * (0.55f + hintPulse * 0.45f) : isSelected ? FaceSelected : FocusColor;
                 StrokeRect(context, rect, color, isHint ? 3f : 2f);
             }
-
-            var label = tile.Face.Label;
-            var size = context.MeasureText(TileFont, label);
-            var textPosition = new Vector2(
-                rect.X + (rect.Width - size.X) / 2f,
-                rect.Y + (rect.Height - size.Y) / 2f - 1);
-            context.DrawText(TileFont, label, textPosition, FaceColor(tile.Face));
         }
     }
 

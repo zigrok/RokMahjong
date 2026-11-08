@@ -21,6 +21,10 @@
   <ItemGroup>
     <EmbeddedResource Include="../../third_party/Forma/tests/Assets/Fonts/Inter_Regular.ttf"
                       LogicalName="RokMahjong.Game.Inter_Regular.ttf" />
+    <EmbeddedResource Include="../../assets/art/tile-atlas.png"
+                      LogicalName="RokMahjong.Game.tile-atlas.png" />
+    <EmbeddedResource Include="../../assets/art/tile-atlas.json"
+                      LogicalName="RokMahjong.Game.tile-atlas.json" />
   </ItemGroup>
 
 </Project>

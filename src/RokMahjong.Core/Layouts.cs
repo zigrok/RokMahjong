@@ -16,10 +16,14 @@ public static class Layouts
 
     public static IReadOnlyList<TileFace> Faces { get; } = BuildFaces();
 
-    public static DeckProfile Mini36 { get; } = new("mini36", Faces.Take(18).ToArray(), 2);
-    public static DeckProfile Classic72 { get; } = new("classic72", Faces.Take(18).ToArray(), 4);
-    public static DeckProfile Classic108 { get; } = new("classic108", Faces.Take(27).ToArray(), 4);
-    public static DeckProfile Classic144 { get; } = new("classic144", Faces, 4);
+    public static DeckProfile Mini36 { get; } = BuildDeck("mini36", Faces.Take(18), 2);
+    public static DeckProfile Classic72 { get; } = BuildDeck("classic72", Faces.Take(18), 4);
+    public static DeckProfile Classic108 { get; } = BuildDeck("classic108", Faces.Take(27), 4);
+    public static DeckProfile Classic144 { get; } = new("classic144",
+        Faces.Take(34).Select(face => new DeckEntry(face, 4))
+            .Concat(Faces.Skip(34).Take(4).Select(face => new DeckEntry(face, 1)))
+            .Concat(Faces.Skip(38).Take(4).Select(face => new DeckEntry(face, 1)))
+            .ToArray());
 
     public static IReadOnlyList<DeckProfile> Decks { get; } = new[]
     {
@@ -50,6 +54,9 @@ public static class Layouts
         Decks.FirstOrDefault(deck => deck.Id == id)
         ?? throw new ArgumentException($"Unknown deck '{id}'.", nameof(id));
 
+    private static DeckProfile BuildDeck(string id, IEnumerable<TileFace> faces, int copies) =>
+        new(id, faces.Select(face => new DeckEntry(face, copies)).ToArray());
+
     public static LevelDefinition GetLevel(int oneBasedIndex) =>
         Levels.FirstOrDefault(level => level.Index == oneBasedIndex)
         ?? throw new ArgumentOutOfRangeException(nameof(oneBasedIndex));
@@ -64,8 +71,10 @@ public static class Layouts
         for (var rank = 0; rank < winds.Length; rank++) faces.Add(new TileFace(MatchGroup.Wind, rank + 1, winds[rank]));
         var dragons = new[] { "R", "G", "Wh" };
         for (var rank = 0; rank < dragons.Length; rank++) faces.Add(new TileFace(MatchGroup.Dragon, rank + 1, dragons[rank]));
-        faces.Add(new TileFace(MatchGroup.Flower, 1, "F"));
-        faces.Add(new TileFace(MatchGroup.Season, 1, "Se"));
+        var flowers = new[] { "梅", "蘭", "菊", "竹" };
+        for (var rank = 0; rank < flowers.Length; rank++) faces.Add(new TileFace(MatchGroup.Flower, rank + 1, $"F{rank + 1}"));
+        var seasons = new[] { "春", "夏", "秋", "冬" };
+        for (var rank = 0; rank < seasons.Length; rank++) faces.Add(new TileFace(MatchGroup.Season, rank + 1, $"Se{rank + 1}"));
         return faces;
     }
 

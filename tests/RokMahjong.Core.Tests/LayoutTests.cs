@@ -24,6 +24,15 @@ public class LayoutTests
     }
 
     [Fact]
+    public void Traditional_set_has_42_faces()
+    {
+        Assert.Equal(42, Layouts.Faces.Count);
+        Assert.Equal(4, Layouts.Faces.Count(face => face.Group == MatchGroup.Flower));
+        Assert.Equal(4, Layouts.Faces.Count(face => face.Group == MatchGroup.Season));
+        Assert.Equal(144, Layouts.Classic144.TileCount);
+    }
+
+    [Fact]
     public void Three_layout_families_exist()
     {
         Assert.Equal(new[] { "Lotus", "Pagoda", "Turtle" }, Layouts.All.Select(l => l.Family).Distinct().OrderBy(x => x));

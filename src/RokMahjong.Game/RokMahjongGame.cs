@@ -16,6 +16,7 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
     private readonly string? _screenshotPath;
     private readonly string _startScreen;
     private readonly int _autoplayLevel;
+    private readonly int _startLevel = 1;
     private ScriptedInputSource? _autoplayInput;
     private IReadOnlyList<(int First, int Second)>? _autoplaySolution;
     private int _autoplayPair;
@@ -23,6 +24,7 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
     private int _autoplayPhase;
     private TimeSpan _autoplayNext;
     private UIFontFace? _fontFace;
+    private TileAtlas? _tileAtlas;
     private GameShell? _shell;
     private int _frames;
 
@@ -51,6 +53,8 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
                 _startScreen = args[++i];
             else if (args[i] == "--autoplay" && i + 1 < args.Length)
                 _autoplayLevel = int.Parse(args[++i]);
+            else if (args[i] == "--level" && i + 1 < args.Length)
+                _startLevel = int.Parse(args[++i]);
         }
 
         _startScreen ??= "menu";
@@ -88,7 +92,16 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
         };
         _ui.TooltipUIFont = body;
 
-        _shell = new GameShell(_ui, new SaveStore(), body, title, tile);
+        try
+        {
+            _tileAtlas = TileAtlas.Load(GraphicsDevice, typeof(RokMahjongGame).Assembly);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Tile atlas could not be loaded; falling back to vector tiles. {exception.Message}");
+        }
+
+        _shell = new GameShell(_ui, new SaveStore(), body, title, tile, _tileAtlas);
         _shell.ExitRequested += Exit;
 
         _router.BoardChanged += () => _shell?.OnBoardChanged();
@@ -109,7 +122,7 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
             switch (_startScreen)
             {
                 case "game":
-                    _shell.StartLevel(1);
+                    _shell.StartLevel(_startLevel);
                     break;
                 case "levels":
                     _shell.ShowLevelSelect();
@@ -223,6 +236,7 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
     {
         if (disposing)
         {
+            _tileAtlas?.Dispose();
             _ui.Dispose();
             _fontFace?.Dispose();
         }

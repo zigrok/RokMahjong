@@ -60,10 +60,13 @@ public sealed record BoardLayout(
     public float WorldRows => Slots.Count == 0 ? 1 : (Slots.Max(s => s.Y) + 2) / 2f;
 }
 
-public sealed record DeckProfile(string Id, IReadOnlyList<TileFace> Faces, int CopiesPerFace)
+public sealed record DeckEntry(TileFace Face, int Copies);
+
+public sealed record DeckProfile(string Id, IReadOnlyList<DeckEntry> Entries)
 {
-    public int TileCount => Faces.Count * CopiesPerFace;
+    public int TileCount => Entries.Sum(entry => entry.Copies);
     public int PairCount => TileCount / 2;
+    public IEnumerable<TileFace> AllFaces => Entries.SelectMany(entry => Enumerable.Repeat(entry.Face, entry.Copies));
 }
 
 public sealed record LevelDefinition(

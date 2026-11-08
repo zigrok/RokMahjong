@@ -45,6 +45,20 @@ public class SolvabilityTests
     }
 
     [Fact]
+    public void Shuffle_solution_replays_on_a_42_face_board()
+    {
+        var game = MahjongGame.Create(Layouts.Pagoda144, Layouts.Classic144, 5501);
+        var shuffle = game.Shuffle(new SeededRandom(42));
+        Assert.True(shuffle.Changed);
+        foreach (var (first, second) in shuffle.Solution!)
+        {
+            Assert.Equal(SelectResult.Selected, game.TrySelect(first));
+            Assert.Equal(SelectResult.Matched, game.TrySelect(second));
+        }
+        Assert.Equal(GameStatus.Won, game.Status);
+    }
+
+    [Fact]
     public void Shuffle_solution_replays_from_a_mid_game_state()
     {
         var game = MahjongGame.Create(Layouts.Lotus36, Layouts.Mini36, 909);
