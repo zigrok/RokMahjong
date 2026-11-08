@@ -8,13 +8,28 @@ The game uses a 2D presentation with 2.5D tiles, supports portrait and landscape
 layouts, and is designed for mouse, touch, keyboard and controller from the
 start. Desktop is the first target; native mobile is a later Forma workstream.
 
-**Status:** planning approved, including the architecture and testing strategy.
-See [`docs/plan.md`](docs/plan.md). Implementation starts at milestone M0.
+**Status:** desktop v1 is playable. The 12-level journey, hint/undo/shuffle,
+mouse/touch/keyboard/gamepad input, save/resume and headless gameplay suite are
+implemented. See [`docs/plan.md`](docs/plan.md) for the live checklist and the
+post-v1 backlog.
 
-Gameplay is designed to be tested through the real input and UI path on the
-MonoGame fork's headless backend, and the same scenarios can be watched in a
-real window or replayed from a failure artifact. See
-[`docs/testing.md`](docs/testing.md).
+![Rok Mahjong main menu](docs/images/menu.png)
+
+![Rok Mahjong level select](docs/images/levels.png)
+
+![Rok Mahjong gameplay](docs/images/game.png)
+
+## Play
+
+```bash
+make build
+make run
+```
+
+Mouse: click or drag matching tiles. Keyboard: arrows/Tab to move, Enter to
+select, H hint, S shuffle, U undo, Esc pause. Gamepad: D-pad/left stick, A
+select, B back, X hint, Y shuffle, LB undo, Start pause. Touch uses the same
+pointer path as the mouse.
 
 **Initial dependency baseline:** MonoGame `260e930`, Forma `8827393`, XamlX
 `0337e9b`. The pinned Forma core and `Forma.Xaml.Build` compile cleanly against
@@ -71,30 +86,27 @@ git submodule status --recursive
 | `src/RokMahjong.Core` | Pure C# rules, layouts, deals, history, scoring |
 | `src/RokMahjong.Game` | MonoGame + Forma client, board and screens |
 | `src/RokMahjong.Desktop` | Desktop executable host |
-| `src/RokMahjong.Content` | MGCB content builder project |
-| `tests/` | Test harness, core/solvability, headless gameplay and render tests |
-| `tools/` | Tile art generator, Playtest runner, plan progress script and gallery |
-| `docs/` | Plan, architecture, testing strategy and goal prompt |
+| `tests/RokMahjong.Core.Tests` | Rules, layouts, solvability, 10k-seed replay |
+| `tests/RokMahjong.Game.Tests` | Real input-router gameplay + Forma headless UI |
+| `tools/RokMahjong.Playtest` | Headless level solver with JSON output |
+| `tools/gallery.sh` | Windowed screenshot smoke check |
+| `tools/plan-progress.sh` | Checklist progress reporter |
+| `docs/` | Plan, architecture, testing strategy, goal prompt and screenshots |
 | `AGENTS.md` | Project rules and definition of done for coding agents |
 | `third_party/` | Pinned MonoGame and Forma submodules |
-
-The project skeleton lands with milestone M0. Until then, only the repository
-scaffolding, submodules and documentation exist.
 
 ## Development
 
 ```bash
-# Initialize/update the required submodules.
-make submodules
-
-# Show submodule state.
-make submodule-status
-
-# Verify every pinned submodule commit is reachable from a remote branch.
-make check-submodules
+make submodules         # initialize MonoGame, Forma and XamlX
+make build              # build the solution
+make run                # launch the desktop game
+make test               # core + game tests
+make test-all           # whole solution
+make playtest LEVEL=1 DEVICE=mouse
+make gallery            # capture and validate screenshots
+make check-submodules   # verify pins are reachable
 ```
-
-Build and test targets will be added alongside the M0 solution skeleton.
 
 ## Plan and goal tracking
 
@@ -120,29 +132,22 @@ The test strategy is layered:
 
 - **Core and solvability:** pure C# tests prove that every generated deal and
   shuffle carries a verified removal order that replays through the real game
-  API.
-- **Headless UI and gameplay:** Forma’s headless UI driver plus the MonoGame
-  fork’s headless backend run the real game loop, input router and board with
-  deterministic `Game.StepFrame` stepping.
-- **Visual and soak:** a real graphics backend renders deterministic gallery
-  scenes and scenario recordings; nightly runs cover large seed sweeps, long
-  sessions and performance.
-
-Planned commands:
+  API. The smoke suite includes a 10,000-seed sweep.
+- **Headless UI and gameplay:** `RokMahjong.Game.Tests` drives the real
+  `GameInputRouter` and `BoardController` with a scripted input source for all
+  12 levels and all four input devices, plus a Forma `HeadlessInput` UI flow
+  test. The native MonoGame `desktopheadless` backend is a post-v1 upgrade.
+- **Visual and soak:** the desktop host captures deterministic screenshots and
+  `make gallery` validates that every screen rendered real pixels.
 
 ```bash
-make headless-runtime  # build the fork's desktopheadless library
-make test              # core + solvability + headless UI
-make test-headless     # full gameplay scenarios on the headless backend
-make gallery           # windowed visual baselines
-make playtest SCENARIO=solve-pagoda MODE=windowed
+make test-all
+make playtest LEVEL=12 DEVICE=gamepad
+make gallery
 ```
 
-`RokMahjong.Playtest` runs the same scenario headless for assertions, windowed
-for observation, or from a recorded replay. Failures produce a replay, state
-dump and UI tree so they can be reproduced locally.
-
-Full details: [`docs/testing.md`](docs/testing.md).
+`RokMahjong.Playtest` prints a JSON result with the level, device, status,
+moves and score. Full details: [`docs/testing.md`](docs/testing.md).
 
 ## Working on MonoGame or Forma
 

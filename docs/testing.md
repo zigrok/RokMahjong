@@ -3,6 +3,12 @@
 > **Status:** planned, M0. Commands and project names in this document are the
 > target shape; update them as the test projects land.
 
+> **Desktop v1 implementation note:** v1 runs the core/solvability suites and a
+> pure headless gameplay harness (`ScriptedInputSource` → `GameInputRouter` →
+> `BoardController` → `MahjongGame`) plus a Forma `HeadlessInput` UI flow test.
+> The native MonoGame `desktopheadless` backend and `Game.StepFrame` integration
+> remain the post-v1 upgrade path described below.
+
 Rok Mahjong treats automated gameplay testing as a first-class feature, not an
 afterthought. The goal is not only “does the model compile?” but **can a player
 actually complete the boards we generate, through the real input and UI path,

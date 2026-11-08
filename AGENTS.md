@@ -120,7 +120,9 @@ easier; ask the user if scope must change.
 | `third_party/Forma` | Pinned Forma submodule (+ XamlX) |
 
 Dependency direction: `Core ← Game ← Desktop`; `Game → Forma → MonoGame`.
-`TestHarness` references Core and Game, never the other way around.
+Tests reference Core and Game and use `Forma.Testing` for headless UI. There is
+no separate TestHarness assembly in v1; the scripted input and board controller
+live in `RokMahjong.Game`.
 
 ---
 
@@ -141,22 +143,20 @@ Dependency direction: `Core ← Game ← Desktop`; `Game → Forma → MonoGame`
 
 ---
 
-## UI rules (Forma FHTML/FCSS)
+## UI rules (Forma)
 
-- Views are `.fhtml` + `.fcss`; **do not add XAML source**. The converter compiles
-  the dialect through Forma XAML at build time.
-- Read `third_party/Forma/docs/agent-design-guide.md` before designing a screen.
-- Design values live in the root theme: colors, spacing, radius, motion, type.
-  Views use classes and `var(--rok-*)`; no raw hex, no one-off pixel spacing, no
-  literal `FontSize`.
-- Every interactive control gets a stable `AutomationId` and an accessible name.
+- Desktop v1 uses **C# Forma controls** in `GameShell`; do not add XAML source.
+  FHTML/FCSS authored views and Debug hot reload are post-v1 and should not be
+  started without a request.
 - Use Forma controls and containers; do not build a parallel widget system.
-- Hot reload is Debug-only. An invalid `.fhtml`/`.fcss` must leave the live tree
-  intact.
+- Design values live in the `Forma.Theme` set up in `RokMahjongGame`; keep
+  spacing, colors and focus behavior consistent.
+- Read `third_party/Forma/docs/agent-design-guide.md` for spacing, focus,
+  contrast and target-size guidance.
+- Every interactive control gets a stable `AutomationId` and an accessible name.
 - The board is a C# `DrawingElement`, not a separate renderer. The HUD and
-  menus are Forma views over it.
-- Loop: edit → `forma-xaml validate` → `forma-xaml format` → look at it
-  (preview/gallery) → run gallery checks.
+  menus are Forma controls over it.
+- Use the deterministic screenshot and `make gallery` check after UI changes.
 
 ---
 

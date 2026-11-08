@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>RokMahjong.Playtest</RootNamespace>
+    <AssemblyName>RokMahjong.Playtest</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/RokMahjong.Core/RokMahjong.Core.csproj" />
+    <ProjectReference Include="../../src/RokMahjong.Game/RokMahjong.Game.csproj" />
+  </ItemGroup>
+
+</Project>

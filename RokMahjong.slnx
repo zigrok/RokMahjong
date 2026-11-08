@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RokMahjong.Core/RokMahjong.Core.csproj" />
+    <Project Path="src/RokMahjong.Desktop/RokMahjong.Desktop.csproj" />
+    <Project Path="src/RokMahjong.Game/RokMahjong.Game.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RokMahjong.Core.Tests/RokMahjong.Core.Tests.csproj" />
+    <Project Path="tests/RokMahjong.Game.Tests/RokMahjong.Game.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/RokMahjong.Playtest/RokMahjong.Playtest.csproj" />
+  </Folder>
+</Solution>

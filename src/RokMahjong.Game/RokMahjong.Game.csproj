@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>RokMahjong.Game</RootNamespace>
+    <AssemblyName>RokMahjong.Game</AssemblyName>
+    <FormaRuntime>MonoGame</FormaRuntime>
+    <MonoGameProjectPath>$(MSBuildThisFileDirectory)../../third_party/MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj</MonoGameProjectPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../RokMahjong.Core/RokMahjong.Core.csproj" />
+    <ProjectReference Include="../../third_party/Forma/src/Forma/Forma.csproj"
+                      AdditionalProperties="FormaRuntime=MonoGame;MonoGameProjectPath=$(MonoGameProjectPath)" />
+    <ProjectReference Include="../../third_party/Forma/src/Forma.DynamicText/Forma.DynamicText.csproj"
+                      AdditionalProperties="FormaRuntime=MonoGame;MonoGameProjectPath=$(MonoGameProjectPath)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../third_party/Forma/tests/Assets/Fonts/Inter_Regular.ttf"
+                      LogicalName="RokMahjong.Game.Inter_Regular.ttf" />
+  </ItemGroup>
+
+</Project>
