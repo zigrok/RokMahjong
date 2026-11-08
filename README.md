@@ -73,9 +73,8 @@ git submodule status --recursive
 | `src/RokMahjong.Desktop` | Desktop executable host |
 | `src/RokMahjong.Content` | MGCB content builder project |
 | `tests/` | Test harness, core/solvability, headless gameplay and render tests |
-| `tools/` | Tile art generator, Playtest runner, progress/gate scripts and gallery |
-| `docs/` | Plan, architecture diagrams and testing strategy |
-| `.opencode/` | Project `/go` command and desktop goal contract |
+| `tools/` | Tile art generator, Playtest runner, plan progress script and gallery |
+| `docs/` | Plan, architecture, testing strategy and goal prompt |
 | `AGENTS.md` | Project rules and definition of done for coding agents |
 | `third_party/` | Pinned MonoGame and Forma submodules |
 
@@ -105,15 +104,15 @@ Build and test targets will be added alongside the M0 solution skeleton.
 ```bash
 make progress           # overall progress
 make progress-desktop   # M0-M5 desktop progress
-make goal-gate          # re-read the desktop goal evidence
 ```
 
-The project `/go` command reads `.opencode/goals/desktop-v1.md`, sets a
-120-turn goal budget, and delegates to the opencode-goal plugin’s `/goal`
-command. It is a small local plugin rather than a Markdown prompt template
-because OpenCode prompt templates cannot drive the standing goal loop. The goal
-is complete only when the plan’s M0–M5 phases and the **Desktop v1 acceptance**
-checklist are fully checked and `make goal-gate` prints `GOAL GATE OK`.
+The desktop goal prompt for the installed `/goal` plugin is
+[`docs/goal-desktop-v1.md`](docs/goal-desktop-v1.md). Paste the whole block into
+the composer and send it; it already starts with `/goal`. Optionally run
+`/goal budget 120` first for a larger turn budget. The goal is complete only
+when the plan’s M0–M5 phases and the **Desktop v1 acceptance** checklist are
+fully checked and the reply includes the build, test, headless gameplay and
+gallery evidence.
 
 ## Testing
 
@@ -162,4 +161,4 @@ scripts.
 - [`docs/testing.md`](docs/testing.md) — test layers, solvability, headless gameplay, replays, CI gates
 - [`AGENTS.md`](AGENTS.md) — project rules and definition of done for coding agents
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — submodule branches, PRs, CI gates
-- [`.opencode/goals/desktop-v1.md`](.opencode/goals/desktop-v1.md) — `/go` desktop goal contract
+- [`docs/goal-desktop-v1.md`](docs/goal-desktop-v1.md) — prompt for the installed `/goal` plugin

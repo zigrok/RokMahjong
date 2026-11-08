@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help submodules submodule-status check-submodules progress progress-desktop goal-gate
+.PHONY: help submodules submodule-status check-submodules progress progress-desktop
 
 help:
 	@echo "Rok Mahjong repository targets"
@@ -10,7 +10,6 @@ help:
 	@echo "  make check-submodules   Verify pinned commits are remotely reachable"
 	@echo "  make progress           Show overall plan checklist progress"
 	@echo "  make progress-desktop   Show M0-M5 desktop checklist progress"
-	@echo "  make goal-gate          Re-read desktop goal evidence"
 	@echo ""
 	@echo "Build/test targets are added with the M0 solution skeleton."
 
@@ -29,6 +28,3 @@ progress:
 
 progress-desktop:
 	./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5
-
-goal-gate:
-	./tools/goal-gate.sh

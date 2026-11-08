@@ -1,7 +1,16 @@
-Deliver a playable, tested desktop v1 of Rok Mahjong from docs/plan.md: a responsive mahjong solitaire with three layout families, 12 levels, classic pair matching, hint/undo/shuffle, mouse/touch/keyboard/gamepad input, save/resume, and automated headless gameplay proof.
+# Desktop v1 goal prompt
+
+Paste the whole block below into the composer and send it. It already starts
+with `/goal`, so do not type `/goal` again before pasting.
+
+Optional: run `/goal budget 120` first if you want a larger starting budget.
+The default is controlled by the installed goal plugin.
+
+````text
+/goal Deliver a playable, tested desktop v1 of Rok Mahjong from docs/plan.md: a responsive mahjong solitaire with three layout families, 12 levels, classic pair matching, hint/undo/shuffle, mouse/touch/keyboard/gamepad input, save/resume, and automated headless gameplay proof.
 
 ```outcome
-A user can launch the desktop game, play and complete every level through the real UI, resume a saved game, and watch the same scenarios in a real window or from a replay. The M0-M5 and Desktop v1 acceptance checklists in docs/plan.md are fully checked, and tools/goal-gate.sh prints GOAL GATE OK.
+A user can launch the desktop game, play and complete every level through the real UI, resume a saved game, and watch the same scenarios in a real window or from a replay. The M0-M5 and Desktop v1 acceptance checklists in docs/plan.md are fully checked.
 ```
 
 ```verify
@@ -9,10 +18,10 @@ A user can launch the desktop game, play and complete every level through the re
 - All 12 levels can be completed through the real board and input router; solver-agent scenarios cover mouse, touch, keyboard and gamepad.
 - Every generated deal and shuffle replays to an empty board through the real MahjongGame API.
 - Hint, undo, shuffle, deadlock recovery, restart and save/resume work in a real session.
-- The headless gameplay suite, UI flow tests and visual gallery pass.
+- The headless gameplay suite, UI flow tests and visual gallery pass; the reply includes the commands and their output.
 - The release build has 0 warnings and 0 errors.
 - `./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict` and `./tools/plan-progress.sh docs/plan.md --section "Desktop v1 acceptance" --strict` exit 0.
-- Evidence is recorded under artifacts/goal/ and summarized in artifacts/goal/desktop-ready.md.
+- A windowed Playtest run or screenshot is included as visible proof.
 ```
 
 ```constraints
@@ -34,4 +43,10 @@ A user can launch the desktop game, play and complete every level through the re
 
 stop when: A required upstream Forma/MonoGame change cannot pass its CI after three concrete attempts and needs a product decision; a required SDK, tool or native runtime is unavailable and cannot be installed; the plan's desktop acceptance criteria conflict or need a user choice not covered by the defaults; or the next step needs credentials, a physical device, or scope beyond desktop v1.
 
-verify-cmd: ./tools/goal-gate.sh
+verify-cmd: ./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict
+verify-cmd: ./tools/plan-progress.sh docs/plan.md --section "Desktop v1 acceptance" --strict
+````
+
+Assumption: desktop v1 means the M0–M5 phases plus the **Desktop v1 acceptance**
+checklist; native mobile, tray mode, daily challenge, extra themes, localization
+and online features remain out of scope.

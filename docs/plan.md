@@ -7,7 +7,7 @@
 > **Live progress:** this plan is checklist-driven. Run
 > `./tools/plan-progress.sh docs/plan.md` for status. Mark work in progress with
 > `- [~]` and complete it with `- [x]` in the **same change** that does the work.
-> The `/go` desktop goal uses the M0–M5 phases and the
+> The desktop goal prompt uses the M0–M5 phases and the
 > **Desktop v1 acceptance** checklist as its completion gate.
 
 Rok Mahjong is a relaxing mahjong solitaire matching game built with the
@@ -130,9 +130,6 @@ RokMahjong/
   NuGet.config
   Makefile
   AGENTS.md
-  .opencode/
-    goals/desktop-v1.md    # /go completion contract
-    plugins/rok-goal/      # project /go command
   third_party/
     MonoGame/          # pinned zigrok/MonoGame submodule
     Forma/             # pinned zigrok/Forma submodule (+ XamlX)
@@ -152,7 +149,6 @@ RokMahjong/
     RokMahjong.Playtest/       # run, watch, record and replay scenarios
     gallery/                   # scene manifest, baseline frames
     plan-progress.sh           # checklist progress reporter
-    goal-gate.sh               # re-reads desktop goal evidence
   assets/
     fonts/                     # OFL UI + CJK subset fonts
     audio/                     # music and SFX
@@ -161,6 +157,7 @@ RokMahjong/
     plan.md
     architecture.md
     testing.md
+    goal-desktop-v1.md      # prompt for the installed /goal plugin
 ```
 
 ### Dependency graph
@@ -770,10 +767,10 @@ phase checklists so the goal gate can require both.
 - [ ] Release build has 0 warnings and 0 errors.
 - [ ] `./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict`
       exits 0.
-- [ ] `artifacts/goal/desktop-ready.md` records the build/run commands,
-      scenario evidence and any known limitations.
+- [ ] The goal reply includes the build, test, headless gameplay and gallery
+      evidence, plus a windowed Playtest run or screenshot.
 
-### M6 — Native mobile (post-v1, out of scope for `/go`)
+### M6 — Native mobile (post-v1, out of scope for the desktop goal)
 
 - [ ] Forma mobile build: `net10.0-android` / `net10.0-ios`, MonoGame
       Android/iOS references and GLES effect validation.
@@ -869,11 +866,11 @@ The architecture and testing diagrams are already checked in at
 [`docs/architecture.md`](architecture.md) and
 [`docs/testing.md`](testing.md); keep them current as implementation lands.
 
-To run the desktop goal end-to-end, use `/go`. It reads
-[`.opencode/goals/desktop-v1.md`](../.opencode/goals/desktop-v1.md), sets a
-120-turn budget and delegates to the opencode-goal plugin’s `/goal` command.
-Check progress with `make progress`; the release gate is
-`./tools/goal-gate.sh`.
+To run the desktop goal end-to-end, open
+[`docs/goal-desktop-v1.md`](goal-desktop-v1.md), paste the whole block into the
+composer and send it. It starts with `/goal` for the installed goal plugin.
+Optionally run `/goal budget 120` first for a larger turn budget. Check progress
+with `make progress`; the goal’s `verify-cmd` re-reads the plan checklists.
 
 Two small choices remain open:
 

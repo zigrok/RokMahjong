@@ -54,7 +54,7 @@ make check-submodules           # pins are reachable from remote branches
 # Plan / goal
 ./tools/plan-progress.sh docs/plan.md
 ./tools/plan-progress.sh docs/plan.md --phases M0,M1,M2,M3,M4,M5 --strict
-./tools/goal-gate.sh            # quick re-read of goal evidence
+./tools/plan-progress.sh docs/plan.md --section "Desktop v1 acceptance" --strict
 
 # Build / run (target; M0+)
 dotnet build RokMahjong.slnx
@@ -77,7 +77,7 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy make test-headless
 
 ---
 
-## Plan progress and `/go`
+## Plan progress and the desktop goal
 
 `docs/plan.md` is the live checklist:
 
@@ -89,31 +89,16 @@ Run `./tools/plan-progress.sh docs/plan.md` for overall and per-milestone
 progress. The desktop goal is complete only when the M0–M5 phases and the
 **Desktop v1 acceptance** section are fully checked.
 
-`/go` is a project-local command (`.opencode/plugins/rok-goal/index.ts`). It:
-
-1. reads `.opencode/goals/desktop-v1.md`,
-2. sets a 120-turn session budget,
-3. delegates to the opencode-goal plugin’s `/goal` command.
+The goal prompt for the installed opencode-goal plugin is
+[`docs/goal-desktop-v1.md`](docs/goal-desktop-v1.md). Paste the whole block into
+the composer and send it; it starts with `/goal`. Optionally run
+`/goal budget 120` first for a larger turn budget.
 
 Use `/goal status`, `/goal pause`, `/goal resume`, `/goal clear` to control it.
-If `/go` reports that `/goal` is missing, install the opencode-goal plugin.
-
-The goal contract is the source of truth for “done”. Do not edit it to make the
-goal easier; ask the user if scope must change.
-
-### Goal evidence
-
-Before declaring the goal done, the agent must produce under `artifacts/goal/`:
-
-- `desktop-build.log` — release build with `0 Error(s)` and `0 Warning(s)`
-- `tests.log` — test suite output with `Passed!`, no `Failed!`
-- `gameplay.log` — headless gameplay run ending with `GOAL GAMEPLAY OK`
-- `gallery.log` — gallery run ending with `GOAL GALLERY OK`
-- `desktop-ready.md` — build/run instructions, scenario evidence, known limits,
-  and `Status: READY`
-
-`tools/goal-gate.sh` only re-reads these logs and the plan checklists. It does
-not re-run the proofs.
+The prompt’s `verify-cmd` lines re-read the plan checklists through
+`tools/plan-progress.sh`; the reply must also include the actual build, test,
+headless gameplay and gallery evidence. Do not edit the prompt to make the goal
+easier; ask the user if scope must change.
 
 ---
 
@@ -288,7 +273,9 @@ For any gameplay/UI change:
 - [ ] `./scripts/check-submodules.sh` passes if dependencies moved.
 - [ ] Docs/diagrams are updated if a boundary changed.
 
-For the desktop goal: `./tools/goal-gate.sh` prints `GOAL GATE OK`.
+For the desktop goal: both plan-progress commands from
+`docs/goal-desktop-v1.md` exit 0, and the reply includes the build, test,
+headless gameplay and gallery evidence.
 
 ---
 
