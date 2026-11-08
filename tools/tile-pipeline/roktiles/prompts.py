@@ -79,7 +79,8 @@ _NEGATIVE = (
     "gibberish text, misspelled character, extra pips, missing pips, merged "
     "shapes, invented symbols, multiple tiles, tile stack, blurry, low contrast, "
     "perspective, drop shadow, busy background, photograph, human hands, "
-    "watermark, signature"
+    "watermark, signature, triangular tile, square tile, irregular tile outline, "
+    "green strokes on a red character"
 )
 
 
@@ -93,9 +94,9 @@ def build_prompt(face: Face, style: str = DEFAULT_STYLE, extra: str = "") -> tup
         f"Repaint this mahjong tile as {preset.description}. "
         "Preserve the exact subject, layout, count and proportions of every "
         f"element: {face.description}. Do not add, remove or merge any element. "
-        "One single tile centred on a plain warm ivory background, flat "
-        "straight-on front view, no perspective, crisp legible detail, consistent "
-        "line weight."
+        "One single upright tile with a rounded rectangular outline, exactly like the "
+        "input, centred on a plain warm ivory background, flat straight-on front "
+        "view, no perspective, crisp legible detail, consistent line weight."
     )
     if extra:
         prompt = f"{prompt} {extra.strip()}"

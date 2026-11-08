@@ -77,6 +77,7 @@ Models are selected with environment variables:
 | `ROKTILES_UNET` | `qwen-image-edit-2511-Q4_K_M.gguf` |
 | `ROKTILES_CLIP` | `qwen_2.5_vl_7b_fp8_scaled.safetensors` |
 | `ROKTILES_VAE` | `qwen_image_vae.safetensors` |
+| `ROKTILES_LORA` | empty (no LoRA) |
 | `ROKTILES_TIMEOUT` | `1800` seconds |
 
 The default graph is the official *Image Edit (Qwen 2511)* blueprint: GGUF UNet
@@ -121,6 +122,27 @@ Useful flags: `--seed`, `--steps`, `--cfg`, `--denoise`, `--sampler`,
 On Apple Silicon a 10-step CFG 4.0 run takes roughly a minute per step. Use
 `--steps 2 --cfg 1.0` to check composition quickly, and `--steps 20` for the
 maximum-fidelity blueprint setting.
+
+### Fast batch mode (Lightning LoRA)
+
+The 4-step distilled LoRA cuts a face from roughly 20 minutes to a few minutes
+with a small quality trade-off. Download it into `models/loras`:
+
+```bash
+huggingface-cli download lightx2v/Qwen-Image-Edit-2511-Lightning \
+  Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors \
+  --local-dir /Users/zignd/ComfyUI-Shared/models/loras
+```
+
+Then generate with 4 steps at CFG 1.0:
+
+```bash
+uv run roktiles generate --all --style porcelain --steps 4 --cfg 1.0 \
+  --lora Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors
+```
+
+Set `ROKTILES_LORA` to make the LoRA the default, and `--lora-strength` to
+tune it (1.0 is the published setting).
 
 ## Batch generation
 

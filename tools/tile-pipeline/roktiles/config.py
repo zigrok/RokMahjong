@@ -36,6 +36,7 @@ COMFYUI_CLIP = os.environ.get(
     "ROKTILES_CLIP", "qwen_2.5_vl_7b_fp8_scaled.safetensors"
 )
 COMFYUI_VAE = os.environ.get("ROKTILES_VAE", "qwen_image_vae.safetensors")
+COMFYUI_LORA = os.environ.get("ROKTILES_LORA", "")
 COMFYUI_TIMEOUT = int(os.environ.get("ROKTILES_TIMEOUT", "1800"))
 
 OPENROUTER_BASE_URL = os.environ.get(

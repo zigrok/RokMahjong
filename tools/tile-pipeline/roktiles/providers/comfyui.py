@@ -80,8 +80,11 @@ def build_workflow(
     vae: str,
     shift: float,
     filename_prefix: str,
+    lora: str | None = None,
+    lora_strength: float = 1.0,
 ) -> dict:
-    return {
+    model_source: list = ["1", 0]
+    workflow: dict = {
         "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": unet}},
         "2": {
             "class_type": "CLIPLoader",
@@ -90,7 +93,7 @@ def build_workflow(
         "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae}},
         "4": {
             "class_type": "ModelSamplingAuraFlow",
-            "inputs": {"model": ["1", 0], "shift": shift},
+            "inputs": {"model": model_source, "shift": shift},
         },
         "5": {"class_type": "CFGNorm", "inputs": {"model": ["4", 0], "strength": 1.0}},
         "6": {"class_type": "LoadImage", "inputs": {"image": image_name}},
@@ -143,6 +146,17 @@ def build_workflow(
             "inputs": {"images": ["14", 0], "filename_prefix": filename_prefix},
         },
     }
+    if lora:
+        workflow["16"] = {
+            "class_type": "LoraLoaderModelOnly",
+            "inputs": {
+                "model": ["1", 0],
+                "lora_name": lora,
+                "strength_model": lora_strength,
+            },
+        }
+        workflow["4"]["inputs"]["model"] = ["16", 0]
+    return workflow
 
 
 class ComfyUIProvider:
@@ -159,6 +173,7 @@ class ComfyUIProvider:
         self.model = model or config.COMFYUI_UNET
         self.clip = clip or config.COMFYUI_CLIP
         self.vae = vae or config.COMFYUI_VAE
+        self.lora = config.COMFYUI_LORA
         self.base_url = (base_url or config.COMFYUI_URL).rstrip("/")
 
     def health(self) -> dict:
@@ -194,6 +209,8 @@ class ComfyUIProvider:
             vae=self.vae,
             shift=float(options.get("shift", 3.1)),
             filename_prefix=str(options.get("filename_prefix", "roktiles")),
+            lora=options.get("lora") or None,
+            lora_strength=float(options.get("lora_strength", 1.0)),
         )
 
         client_id = uuid.uuid4().hex
@@ -258,5 +275,7 @@ class ComfyUIProvider:
                 "sampler": str(options.get("sampler", "euler")),
                 "scheduler": str(options.get("scheduler", "simple")),
                 "shift": float(options.get("shift", 3.1)),
+                "lora": options.get("lora") or None,
+                "lora_strength": float(options.get("lora_strength", 1.0)),
             },
         )

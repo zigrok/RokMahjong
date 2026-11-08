@@ -90,6 +90,8 @@ def cmd_generate(args: argparse.Namespace) -> int:
         "sampler": args.sampler,
         "scheduler": args.scheduler,
         "shift": args.shift,
+        "lora": getattr(args, "lora", None) or config.COMFYUI_LORA or None,
+        "lora_strength": getattr(args, "lora_strength", 1.0),
         "extra": args.extra or "",
     }
     run_id = _id("r")
@@ -217,6 +219,8 @@ def _provider_options(args: argparse.Namespace) -> dict:
         "shift": args.shift,
         "width": args.width,
         "height": args.height,
+        "lora": getattr(args, "lora", None) or config.COMFYUI_LORA or None,
+        "lora_strength": getattr(args, "lora_strength", 1.0),
     }
 
 
@@ -443,6 +447,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             print(f"     unet: {provider.model}")
             print(f"     clip: {provider.clip}")
             print(f"     vae:  {provider.vae}")
+            if config.COMFYUI_LORA:
+                print(f"     lora: {config.COMFYUI_LORA}")
         except Exception as error:  # noqa: BLE001 - doctor reports, never crashes
             problems += 1
             print(f"[!!] ComfyUI unreachable: {error}")
@@ -490,6 +496,10 @@ def build_parser() -> argparse.ArgumentParser:
     generate_parser.add_argument("--sampler", default="euler")
     generate_parser.add_argument("--scheduler", default="simple")
     generate_parser.add_argument("--shift", type=float, default=3.1)
+    generate_parser.add_argument(
+        "--lora", default=None, help="ComfyUI LoRA filename (e.g. the 4-step Lightning LoRA)"
+    )
+    generate_parser.add_argument("--lora-strength", type=float, default=1.0)
     generate_parser.add_argument("--width", type=int, default=832)
     generate_parser.add_argument("--height", type=int, default=1152)
     generate_parser.add_argument("--extra", default="", help="extra prompt text")
@@ -563,6 +573,8 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser.add_argument("--sampler", default="euler")
     doctor_parser.add_argument("--scheduler", default="simple")
     doctor_parser.add_argument("--shift", type=float, default=3.1)
+    doctor_parser.add_argument("--lora", default=None)
+    doctor_parser.add_argument("--lora-strength", type=float, default=1.0)
     doctor_parser.add_argument("--width", type=int, default=832)
     doctor_parser.add_argument("--height", type=int, default=1152)
     doctor_parser.set_defaults(func=cmd_doctor)

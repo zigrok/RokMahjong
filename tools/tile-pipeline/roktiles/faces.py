@@ -44,8 +44,8 @@ def _characters() -> list[Face]:
             "characters",
             rank,
             f"the Chinese numeral {NUMERALS[rank - 1]} stacked above the Chinese "
-            "character 萬, both characters in deep vermilion red, split by a thin "
-            "horizontal divider line",
+            "character 萬, every stroke of both characters in the same deep vermilion "
+            "red with no green, split by a thin horizontal divider line",
         )
         for rank in range(1, 10)
     ]
@@ -55,7 +55,7 @@ def _bamboo() -> list[Face]:
     layouts = {
         1: "a single green bamboo stalk with two leaves",
         2: "two green bamboo stalks stacked vertically",
-        3: "three green bamboo stalks arranged in a tall triangle",
+        3: "three green bamboo stalks, one centred above two side by side",
         4: "four green bamboo stalks in a two-by-two grid",
         5: "five green bamboo stalks, one at each corner and one in the centre",
         6: "six green bamboo stalks in two columns of three",
@@ -83,8 +83,8 @@ def _circles() -> list[Face]:
             f"D{r}",
             "circles",
             r,
-            f"{layouts[r]}, the pips in alternating vermilion red, jade green and "
-            "navy blue",
+            f"{layouts[r]}, the pips drawn as clean concentric rings in alternating "
+            "vermilion red, jade green and navy blue",
         )
         for r in range(1, 10)
     ]

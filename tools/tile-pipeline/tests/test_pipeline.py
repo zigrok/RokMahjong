@@ -43,8 +43,8 @@ def test_resolve_labels_by_group() -> None:
         faces.resolve_labels(["Z9"])
 
 
-def test_comfyui_workflow_wires_the_qwen_edit_graph() -> None:
-    workflow = build_workflow(
+def _workflow(**overrides):
+    parameters = dict(
         image_name="C1.png",
         prompt="paint it",
         negative_prompt="bad",
@@ -60,16 +60,31 @@ def test_comfyui_workflow_wires_the_qwen_edit_graph() -> None:
         shift=3.1,
         filename_prefix="roktiles",
     )
+    parameters.update(overrides)
+    return build_workflow(**parameters)
+
+
+def test_comfyui_workflow_wires_the_qwen_edit_graph() -> None:
+    workflow = _workflow()
     assert workflow["1"]["class_type"] == "UnetLoaderGGUF"
     assert workflow["6"]["inputs"]["image"] == "C1.png"
     assert workflow["13"]["inputs"]["positive"] == ["11", 0]
     assert workflow["13"]["inputs"]["negative"] == ["10", 0]
     assert workflow["13"]["inputs"]["seed"] == 7
     assert workflow["15"]["class_type"] == "SaveImage"
+    assert workflow["4"]["inputs"]["model"] == ["1", 0]
     for node in workflow.values():
         for value in node["inputs"].values():
             if isinstance(value, list):
                 assert value[0] in workflow
+
+
+def test_comfyui_workflow_can_apply_a_lora() -> None:
+    workflow = _workflow(lora="lightning.safetensors", lora_strength=0.8)
+    assert workflow["16"]["class_type"] == "LoraLoaderModelOnly"
+    assert workflow["16"]["inputs"]["lora_name"] == "lightning.safetensors"
+    assert workflow["16"]["inputs"]["strength_model"] == 0.8
+    assert workflow["4"]["inputs"]["model"] == ["16", 0]
 
 
 def test_openrouter_extracts_a_base64_image() -> None:

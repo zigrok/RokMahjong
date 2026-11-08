@@ -809,6 +809,8 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] SQLite history of every generation plus per-face selection.
 - [x] Selected faces committed with a provenance manifest.
 - [x] Qwen-Image-Edit 2511 GGUF default workflow and style presets.
+- [x] Optional LoRA loading (4-step Lightning fast-batch recipe documented).
+- [ ] Verify the 4-step Lightning LoRA path with a downloaded model.
 - [ ] Generate, review and select the full 42-face porcelain set.
 - [ ] Compare `lacquer`, `ink` and `jade` styles and sign off the final look.
 - [ ] Exercise the OpenRouter adapter with a real key and model.
