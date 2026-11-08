@@ -392,7 +392,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    artTool[RokMahjong.TileArtGen<br/>SkiaSharp] --> atlasPng[tile-atlas.png]
+    artTool[RokMahjong.TileArtGen<br/>SkiaSharp] --> reference[tile face references<br/>body-less PNGs]
+    reference --> pipeline[roktiles CLI<br/>ComfyUI / OpenRouter]
+    pipeline --> history[(artifacts history<br/>PNG + SQLite)]
+    pipeline --> selected[selected faces<br/>assets/art/faces]
+    selected --> artTool
+    artTool --> atlasPng[tile-atlas.png]
     artTool --> atlasJson[tile-atlas.json<br/>cell/face/depth metadata]
     atlasPng --> mgcb[RokMahjong.Content MGCB]
     atlasJson --> mgcb
@@ -405,8 +410,13 @@ flowchart LR
     assets --> audioMgr[AudioManager]
 ```
 
+- The atlas generator emits body-less reference art for all 42 faces, then
+  composites selected generated faces back into the vector 2.5D body on the
+  next build.
+- `roktiles` owns generation history (gitignored) and selection state; only the
+  selected faces and their manifest are committed.
 - Generated art and metadata are checked in so runtime builds do not need the
-  art tool.
+  art tool or ComfyUI.
 - Headless tests use placeholder assets and do not require the full Content
   build. They assert on state, never pixels.
 - Windowed render tests use the real Content output and a real graphics backend.

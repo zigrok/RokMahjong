@@ -9,11 +9,15 @@ const int FaceLeft = 18;
 const int FaceTop = 18;
 const int Columns = 6;
 const int Rows = 7;
+const int ReferenceScale = 4;
 
 var root = FindRoot();
 var outputDirectory = Path.Combine(root, "assets", "art");
+var referenceDirectory = Path.Combine(outputDirectory, "reference");
+var selectedDirectory = Path.Combine(outputDirectory, "faces");
 var fontPath = Path.Combine(root, "assets", "fonts", "NotoSerifCJKsc-Subset.otf");
 Directory.CreateDirectory(outputDirectory);
+Directory.CreateDirectory(referenceDirectory);
 
 using var typeface = SKTypeface.FromFile(fontPath)
     ?? throw new InvalidOperationException($"Could not load tile font: {fontPath}");
@@ -29,14 +33,22 @@ var blue = new SKColor(39, 77, 138);
 var gold = new SKColor(184, 138, 52);
 
 var faces = BuildFaces();
+var generated = 0;
 for (var index = 0; index < faces.Count; index++)
 {
+    var face = faces[index];
+    var selectedFace = LoadSelectedFace(selectedDirectory, face.Label);
+    if (selectedFace is not null) generated++;
+
     var column = index % Columns;
     var row = index / Columns;
     canvas.Save();
     canvas.Translate(column * CellWidth, row * CellHeight);
-    DrawTile(canvas, faces[index], typeface);
+    DrawTile(canvas, face, typeface, selectedFace);
     canvas.Restore();
+    selectedFace?.Dispose();
+
+    WriteReference(face, typeface);
 }
 
 using (var image = SKImage.FromBitmap(bitmap))
@@ -61,7 +73,8 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "tile-atlas.json"),
     JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
 
-Console.WriteLine($"Wrote {faces.Count} tile faces to {outputDirectory}");
+Console.WriteLine($"Wrote {faces.Count} tile faces to {outputDirectory} ({generated} from generated face art).");
+Console.WriteLine($"Wrote {faces.Count} body-less reference faces to {referenceDirectory}.");
 
 static string FindRoot()
 {
@@ -76,7 +89,7 @@ static string FindRoot()
 
 static List<TileFaceSpec> BuildFaces()
 {
-    var faces = new List<TileFaceSpec>(36);
+    var faces = new List<TileFaceSpec>(42);
     for (var rank = 1; rank <= 9; rank++) faces.Add(new TileFaceSpec("Characters", rank, $"C{rank}"));
     for (var rank = 1; rank <= 9; rank++) faces.Add(new TileFaceSpec("Bamboo", rank, $"B{rank}"));
     for (var rank = 1; rank <= 9; rank++) faces.Add(new TileFaceSpec("Circles", rank, $"D{rank}"));
@@ -93,7 +106,36 @@ static List<TileFaceSpec> BuildFaces()
     return faces;
 }
 
-void DrawTile(SKCanvas canvas, TileFaceSpec face, SKTypeface typeface)
+static SKBitmap? LoadSelectedFace(string directory, string label)
+{
+    var path = Path.Combine(directory, $"{label}.png");
+    return File.Exists(path) ? SKBitmap.Decode(path) : null;
+}
+
+void WriteReference(TileFaceSpec face, SKTypeface typeface)
+{
+    using var reference = new SKBitmap(new SKImageInfo(
+        FaceWidth * ReferenceScale,
+        FaceHeight * ReferenceScale,
+        SKColorType.Rgba8888,
+        SKAlphaType.Premul));
+    using var referenceCanvas = new SKCanvas(reference);
+    referenceCanvas.Clear(SKColors.Transparent);
+    referenceCanvas.Scale(ReferenceScale);
+    referenceCanvas.DrawRect(new SKRect(0, 0, FaceWidth, FaceHeight), new SKPaint { Color = new SKColor(250, 243, 224) });
+    var artRect = new SKRect(28, 24, FaceWidth - 28, FaceHeight - 24);
+    referenceCanvas.Save();
+    referenceCanvas.ClipRect(artRect);
+    DrawFace(referenceCanvas, face, artRect, typeface);
+    referenceCanvas.Restore();
+
+    using var image = SKImage.FromBitmap(reference);
+    using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+    using var stream = File.Create(Path.Combine(referenceDirectory, $"{face.Label}.png"));
+    encoded.SaveTo(stream);
+}
+
+void DrawTile(SKCanvas canvas, TileFaceSpec face, SKTypeface typeface, SKBitmap? selectedFace)
 {
     var faceRect = new SKRect(FaceLeft, FaceTop, FaceLeft + FaceWidth, FaceTop + FaceHeight);
 
@@ -108,12 +150,27 @@ void DrawTile(SKCanvas canvas, TileFaceSpec face, SKTypeface typeface)
     using (var side = new SKPaint { Color = new SKColor(194, 166, 117), IsAntialias = true })
         canvas.DrawRoundRect(new SKRect(faceRect.Left + 7, faceRect.Top + 9, faceRect.Right + 7, faceRect.Bottom + 9), 14, 14, side);
 
+    if (selectedFace is not null)
+    {
+        canvas.Save();
+        canvas.ClipRoundRect(new SKRoundRect(faceRect, 14, 14), SKClipOperation.Intersect, true);
+        using var bitmapPaint = new SKPaint { IsAntialias = true };
+        canvas.DrawBitmap(
+            selectedFace,
+            new SKRect(0, 0, selectedFace.Width, selectedFace.Height),
+            faceRect,
+            new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
+            bitmapPaint);
+        canvas.Restore();
+        return;
+    }
+
     using (var gradient = SKShader.CreateLinearGradient(
-               new SKPoint(faceRect.Left, faceRect.Top),
-               new SKPoint(faceRect.Left, faceRect.Bottom),
-               new[] { new SKColor(255, 252, 241), new SKColor(240, 226, 196) },
-               null,
-               SKShaderTileMode.Clamp))
+        new SKPoint(faceRect.Left, faceRect.Top),
+        new SKPoint(faceRect.Left, faceRect.Bottom),
+        new[] { new SKColor(255, 252, 241), new SKColor(240, 226, 196) },
+        null,
+        SKShaderTileMode.Clamp))
     using (var facePaint = new SKPaint { Shader = gradient, IsAntialias = true })
         canvas.DrawRoundRect(faceRect, 14, 14, facePaint);
 

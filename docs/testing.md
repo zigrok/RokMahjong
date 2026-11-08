@@ -85,6 +85,23 @@ flowchart TB
 The layers are cumulative but independently runnable. A logic change should not
 need a GPU; a visual change should not need the full solver sweep.
 
+### Asset pipeline tests
+
+`tools/tile-pipeline/tests` covers the tile art pipeline without ComfyUI or a
+network:
+
+- the 42-face catalogue is complete and unique;
+- every face builds a prompt containing its own subject and the no-tile-body
+  constraint;
+- the Qwen-Image-Edit workflow is fully wired (every node reference resolves);
+- history and selection round-trip through SQLite;
+- `apply` crops the tile out of its background, normalizes face art, writes the
+  provenance manifest and `reset` removes it.
+
+Run with `make test-tiles`. Generation itself is checked manually: a generated
+face must keep the glyph or pip count of `assets/art/reference/<label>.png`
+before it is selected.
+
 ---
 
 ## 3. Determinism first

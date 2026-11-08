@@ -340,15 +340,44 @@ The board computes a uniform scale from the available rectangle:
 
 A build-time tool produces one atlas with:
 
-- 42 face tiles + back tile + white silhouette/glow mask.
-- A pre-composed 2.5D tile body: face, bevel, side faces, inner plate, baked
-  shadow.
+- 42 face tiles.
+- A pre-composed 2.5D tile body: bevel, side faces, inner plate, baked shadow.
 - Metadata JSON: cell rect, face rect, depth margins, base size.
 - Mipmapped, premultiplied alpha.
-- 2048×2048 target (42 tiles at ~256×340), with room for a second theme later.
+- 6×7 cells at 256×340, with room for a second theme later.
+
+The face art comes from the generation pipeline below. When
+`assets/art/faces/<label>.png` exists the generator draws it as the tile's top
+face over the vector side, bevel and shadow; otherwise it falls back to the
+vector symbol. Selected art is cropped to its tile bounds first, so the
+model's frame aligns with the atlas cell.
 
 At runtime each tile is **one `DrawImage` call** with a transform. Selection,
 hint glow, drag highlight and particles use a small number of vector paths on top.
+
+### Tile face generation pipeline
+
+`tools/tile-pipeline` is a local-first Python CLI that generates, keeps and
+selects tile face art.
+
+- `assets/art/reference/<label>.png` — body-less vector reference art, emitted
+  by `make tiles`, used as the structure image for every generation.
+- `roktiles generate` sends a face to ComfyUI (Qwen-Image-Edit 2511 GGUF by
+  default) or to an OpenRouter image model.
+- Every generation is stored under `artifacts/tile-pipeline/history/` with a
+  SQLite index of prompt, negative prompt, seed, model and parameters.
+  `artifacts/` is gitignored, so history never bloats the repository.
+- `roktiles sheet --face <label>` renders a labelled contact sheet so
+  candidates can be compared without a GUI.
+- `roktiles select <generation>` copies normalized 416×576 face art into
+  `assets/art/faces/`, writes a provenance manifest and rebuilds the atlas.
+- `roktiles reset` drops a face back to the vector fallback.
+- Style presets (`porcelain`, `lacquer`, `ink`, `jade`, `enamel`, `minimal`)
+  change the look only; the per-face subject sentence protects glyphs and pip
+  counts.
+
+Selected faces and `assets/art/faces/manifest.json` are committed, so the game
+builds from the chosen art without ComfyUI, Python or the history database.
 
 ### Draw order and effects
 
@@ -647,8 +676,11 @@ ergonomics, rotation and first-run flow. Manual QA is listed per milestone.
 make build
 make run
 make test
+make test-tiles
 make test-all
 make playtest LEVEL=1 DEVICE=mouse
+make tiles
+make tilegen ARGS="generate --face C1"
 make gallery
 ```
 
@@ -761,13 +793,25 @@ adds the tests that would have caught the bugs introduced by that milestone.
 ### Post-v1 backlog
 
 - [ ] FHTML/FCSS authored views and Debug hot reload.
-- [ ] Alternate tile themes and an SVG/community art pipeline.
+- [ ] Alternate tile themes and community art packs.
 - [ ] Native MonoGame `desktopheadless` runtime and `Game.StepFrame` gameplay
       tests.
 - [ ] Audio, particles, transitions and a first-run tutorial overlay.
 - [ ] Large-text/high-contrast accessibility modes and localization.
 - [ ] Gallery baseline diffs, recordings, replay files and mutation testing.
 - [ ] Native mobile (M6).
+
+### M7 — Generated tile face pipeline (post-v1)
+
+- [x] Body-less reference art emitted by `RokMahjong.TileArtGen`.
+- [x] Atlas composites a selected generated face inside the vector 2.5D body.
+- [x] `roktiles` CLI with ComfyUI and optional OpenRouter adapters.
+- [x] SQLite history of every generation plus per-face selection.
+- [x] Selected faces committed with a provenance manifest.
+- [x] Qwen-Image-Edit 2511 GGUF default workflow and style presets.
+- [ ] Generate, review and select the full 42-face porcelain set.
+- [ ] Compare `lacquer`, `ink` and `jade` styles and sign off the final look.
+- [ ] Exercise the OpenRouter adapter with a real key and model.
 
 ### M6 — Native mobile (post-v1, out of scope for the desktop goal)
 
@@ -852,6 +896,7 @@ make run
 make test-all
 make playtest LEVEL=1 DEVICE=mouse
 make tiles
+make tilegen ARGS="status"
 make gallery
 ```
 

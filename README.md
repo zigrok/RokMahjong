@@ -92,10 +92,11 @@ git submodule status --recursive
 | `tests/RokMahjong.Core.Tests` | Rules, layouts, solvability, 10k-seed replay |
 | `tests/RokMahjong.Game.Tests` | Real input-router gameplay + Forma headless UI |
 | `tools/RokMahjong.Playtest` | Headless level solver with JSON output |
-| `tools/RokMahjong.TileArtGen` | SkiaSharp generator for the 42-face tile atlas |
+| `tools/RokMahjong.TileArtGen` | SkiaSharp generator for reference art and the tile atlas |
+| `tools/tile-pipeline` | `roktiles` CLI for AI face generation, history and selection |
 | `tools/gallery.sh` | Windowed screenshot smoke check |
 | `tools/plan-progress.sh` | Checklist progress reporter |
-| `assets/art/` | Generated tile atlas PNG + metadata |
+| `assets/art/` | Tile atlas, body-less references and selected face art |
 | `assets/fonts/` | OFL CJK subset used only by the tile generator |
 | `docs/` | Plan, architecture, testing strategy, goal prompt and screenshots |
 | `AGENTS.md` | Project rules and definition of done for coding agents |
@@ -109,9 +110,11 @@ make build              # build the solution
 make run                # launch the desktop game
 make test               # core + game tests
 make test-all           # whole solution
+make test-tiles         # tile pipeline Python tests
 make playtest LEVEL=1 DEVICE=mouse
 make watch LEVEL=1      # auto-solve a level in a real window
-make tiles              # regenerate the 42-face tile atlas
+make tiles              # regenerate reference art and the tile atlas
+make tilegen ARGS="status"   # tile generation CLI (ComfyUI / OpenRouter)
 make gallery            # capture and validate screenshots
 make check-submodules   # verify pins are reachable
 ```
@@ -155,10 +158,31 @@ make gallery
 ```
 
 `RokMahjong.Playtest` prints a JSON result with the level, device, status,
-moves and score. The tile atlas is generated from vector art by
-`tools/RokMahjong.TileArtGen` and checked in, so the game runtime needs no art
-tool. `make tiles` regenerates `assets/art/tile-atlas.png` and its metadata.
-Full details: [`docs/testing.md`](docs/testing.md).
+moves and score.
+Full details: [`docs/testing.md`](testing.md).
+
+## Tile art
+
+The 42 tile faces are AI-generated and chosen through a local-first pipeline.
+The generator emits body-less reference art for every face, and
+`tools/tile-pipeline` sends it to ComfyUI (Qwen-Image-Edit 2511 by default) or
+an optional OpenRouter image model. Every generation is kept with its prompt,
+seed and parameters; selecting one updates the face art the game ships with.
+The vector 2.5D body, bevel and shadow are always drawn by
+`tools/RokMahjong.TileArtGen`, so tiles stay physically consistent.
+
+```bash
+make tilegen ARGS="doctor"                                # check ComfyUI + references
+make tilegen ARGS="generate --face C1 --style porcelain"  # generate one face
+make tilegen ARGS="history --face C1"                     # list past generations
+make tilegen ARGS="select <generation-id>"                # apply + rebuild atlas
+make tilegen ARGS="reset --face C1"                       # back to vector art
+make tiles                                                # rebuild atlas only
+```
+
+History lives in `artifacts/tile-pipeline/` (gitignored); only the selected
+faces and their provenance manifest are committed. See
+[`tools/tile-pipeline/README.md`](tools/tile-pipeline/README.md).
 
 ## Working on MonoGame or Forma
 

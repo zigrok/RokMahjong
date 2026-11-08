@@ -3,7 +3,7 @@ SHELL := /bin/bash
 LEVEL ?= 1
 DEVICE ?= mouse
 
-.PHONY: help submodules submodule-status check-submodules progress progress-desktop build run watch tiles test test-core test-game test-all playtest gallery
+.PHONY: help submodules submodule-status check-submodules progress progress-desktop build run watch tiles tilegen test test-core test-game test-tiles test-all playtest gallery
 
 help:
 	@echo "Rok Mahjong repository targets"
@@ -16,9 +16,10 @@ help:
 	@echo "  make build              Build the solution"
 	@echo "  make run                Run the desktop game"
 	@echo "  make watch LEVEL=1      Watch an auto-solved level in a real window"
-	@echo "  make tiles              Regenerate the 42-face tile atlas"
+	@echo "  make tiles              Regenerate reference art and the tile atlas"
+	@echo "  make tilegen ARGS=\"…\"   Run the tile generation CLI (see tools/tile-pipeline)"
 	@echo "  make test               Run core and game tests"
-	@echo "  make test-all           Run the whole solution test suite"
+	@echo "  make test-tiles         Run the tile pipeline Python tests"
 	@echo "  make playtest LEVEL=1 DEVICE=mouse"
 	@echo "  make gallery            Capture and validate desktop screenshots"
 
@@ -50,6 +51,9 @@ watch:
 tiles:
 	dotnet run --project tools/RokMahjong.TileArtGen
 
+tilegen:
+	cd tools/tile-pipeline && uv run roktiles $(ARGS)
+
 test: test-core test-game
 
 test-core:
@@ -57,6 +61,9 @@ test-core:
 
 test-game:
 	dotnet test tests/RokMahjong.Game.Tests/RokMahjong.Game.Tests.csproj
+
+test-tiles:
+	cd tools/tile-pipeline && uv run pytest
 
 test-all:
 	dotnet test RokMahjong.slnx
