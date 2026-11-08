@@ -96,7 +96,9 @@ network:
 - the Qwen-Image-Edit workflow is fully wired (every node reference resolves);
 - history and selection round-trip through SQLite;
 - `apply` crops the tile out of its background, normalizes face art, writes the
-  provenance manifest and `reset` removes it.
+  provenance manifest and `reset` removes it;
+- the game tests assert the embedded atlas metadata covers all 42 faces and that
+  the PNG dimensions match the cell grid.
 
 Run with `make test-tiles`. Generation itself is checked manually: a generated
 face must keep the glyph or pip count of `assets/art/reference/<label>.png`
