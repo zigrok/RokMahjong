@@ -1,0 +1,30 @@
+# .NET build output
+bin/
+obj/
+artifacts/
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.nupkg
+*.snupkg
+
+# IDE / local tooling
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# MonoGame content intermediates
+Content/bin/
+Content/obj/
+
+# Local logs and captures
+*.log
+tmp/

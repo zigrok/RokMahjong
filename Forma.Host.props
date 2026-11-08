@@ -1,0 +1,14 @@
+<Project>
+
+  <!-- Forma imports this file during early evaluation so NuGet restore and the
+       build graph see the same MonoGame project. It must stay mapping-only:
+       no game projects or target-specific settings belong here. -->
+  <PropertyGroup>
+    <RokMonoGameForkRoot Condition="'$(RokMonoGameForkRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)third_party/MonoGame'))</RokMonoGameForkRoot>
+    <RokMonoGameProjectPath Condition="'$(RokMonoGameProjectPath)' == ''">$(RokMonoGameForkRoot)/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj</RokMonoGameProjectPath>
+
+    <FormaRuntime Condition="'$(FormaRuntime)' == ''">MonoGame</FormaRuntime>
+    <MonoGameProjectPath Condition="'$(FormaRuntime)' == 'MonoGame' and '$(MonoGameProjectPath)' == ''">$(RokMonoGameProjectPath)</MonoGameProjectPath>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+<Project>
+
+  <!-- Shared settings for all first-party projects. The pinned submodules have
+       their own Directory.Build.props, and third_party/ has an explicit build
+       boundary so these settings do not leak into MonoGame or Forma. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <RokMahjongVersion Condition="'$(RokMahjongVersion)' == ''">0.1.0-dev</RokMahjongVersion>
+    <InformationalVersion Condition="'$(RokMahjongVersion)' != ''">$(RokMahjongVersion)</InformationalVersion>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+</Project>

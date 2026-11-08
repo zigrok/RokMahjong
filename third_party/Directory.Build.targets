@@ -1,0 +1,4 @@
+<Project>
+  <!-- Deliberate MSBuild boundary: stop the game repository's
+       Directory.Build.targets from being inherited by the pinned submodules. -->
+</Project>

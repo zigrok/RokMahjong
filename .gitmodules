@@ -1,0 +1,8 @@
+[submodule "third_party/MonoGame"]
+	path = third_party/MonoGame
+	url = https://github.com/zigrok/MonoGame.git
+	branch = develop
+[submodule "third_party/Forma"]
+	path = third_party/Forma
+	url = https://github.com/zigrok/Forma.git
+	branch = main
