@@ -3,6 +3,7 @@ using Forma;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using RokMahjong.Core;
 
 namespace RokMahjong.Game;
 
@@ -10,10 +11,17 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
 {
     private readonly GraphicsDeviceManager _graphics;
     private readonly UIContext _ui;
-    private readonly DeviceInputSource _input = new();
+    private IInputSource _input = new DeviceInputSource();
     private readonly GameInputRouter _router;
     private readonly string? _screenshotPath;
     private readonly string _startScreen;
+    private readonly int _autoplayLevel;
+    private ScriptedInputSource? _autoplayInput;
+    private IReadOnlyList<(int First, int Second)>? _autoplaySolution;
+    private int _autoplayPair;
+    private int _autoplayTile;
+    private int _autoplayPhase;
+    private TimeSpan _autoplayNext;
     private UIFontFace? _fontFace;
     private GameShell? _shell;
     private int _frames;
@@ -41,6 +49,8 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
                 _screenshotPath = args[++i];
             else if (args[i] == "--screen" && i + 1 < args.Length)
                 _startScreen = args[++i];
+            else if (args[i] == "--autoplay" && i + 1 < args.Length)
+                _autoplayLevel = int.Parse(args[++i]);
         }
 
         _startScreen ??= "menu";
@@ -88,23 +98,32 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
         _router.ShuffleRequested += () => _shell?.Shuffle();
         _router.UndoRequested += () => _shell?.Undo();
 
-        switch (_startScreen)
+        if (_autoplayLevel > 0)
         {
-            case "game":
-                _shell.StartLevel(1);
-                break;
-            case "levels":
-                _shell.ShowLevelSelect();
-                break;
-            case "settings":
-                _shell.ShowSettings();
-                break;
-            case "howto":
-                _shell.ShowHowToPlay();
-                break;
-            default:
-                _shell.ShowMainMenu();
-                break;
+            _shell.StartLevel(_autoplayLevel);
+            _autoplayInput = new ScriptedInputSource();
+            _input = _autoplayInput;
+        }
+        else
+        {
+            switch (_startScreen)
+            {
+                case "game":
+                    _shell.StartLevel(1);
+                    break;
+                case "levels":
+                    _shell.ShowLevelSelect();
+                    break;
+                case "settings":
+                    _shell.ShowSettings();
+                    break;
+                case "howto":
+                    _shell.ShowHowToPlay();
+                    break;
+                default:
+                    _shell.ShowMainMenu();
+                    break;
+            }
         }
 
         base.LoadContent();
@@ -122,6 +141,7 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
         _ui.ViewportSize = logical;
 
         _router.Board = _shell.Board;
+        AdvanceAutoplay(gameTime);
         _router.Update(_input, _shell.IsGameplay, _shell.IsModal, scale, gameTime.ElapsedGameTime);
         _shell.Update(gameTime, logical);
         _ui.Update(gameTime);
@@ -139,6 +159,52 @@ public sealed class RokMahjongGame : Microsoft.Xna.Framework.Game
             Exit();
         }
         base.Draw(gameTime);
+    }
+
+    private void AdvanceAutoplay(GameTime gameTime)
+    {
+        if (_autoplayInput is null || _shell?.Board is null) return;
+        if (gameTime.TotalGameTime < _autoplayNext) return;
+        var board = _shell.Board;
+        _autoplaySolution ??= DealGenerator.Generate(board.Game.Layout, board.Game.Deck, board.Game.Seed).Solution;
+        if (_autoplayPair >= _autoplaySolution.Count)
+        {
+            _autoplayInput = null;
+            _input = new DeviceInputSource();
+            return;
+        }
+
+        var pair = _autoplaySolution[_autoplayPair];
+        var tileId = _autoplayTile == 0 ? pair.First : pair.Second;
+        var tile = board.Game.GetTile(tileId);
+        if (tile is null) { _autoplayPair++; _autoplayTile = 0; return; }
+        var rect = board.Presentation.GetFaceRect(tile);
+        var point = new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+
+        switch (_autoplayPhase)
+        {
+            case 0:
+                _autoplayInput.SetPointer(point, false, InputDeviceKind.Mouse);
+                _autoplayPhase = 1;
+                _autoplayNext = gameTime.TotalGameTime + TimeSpan.FromMilliseconds(90);
+                break;
+            case 1:
+                _autoplayInput.SetPointer(point, true, InputDeviceKind.Mouse);
+                _autoplayPhase = 2;
+                _autoplayNext = gameTime.TotalGameTime + TimeSpan.FromMilliseconds(90);
+                break;
+            default:
+                _autoplayInput.SetPointer(point, false, InputDeviceKind.Mouse);
+                _autoplayPhase = 0;
+                _autoplayTile++;
+                if (_autoplayTile >= 2)
+                {
+                    _autoplayTile = 0;
+                    _autoplayPair++;
+                }
+                _autoplayNext = gameTime.TotalGameTime + TimeSpan.FromMilliseconds(180);
+                break;
+        }
     }
 
     private void SaveScreenshot(string path)

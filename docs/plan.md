@@ -750,8 +750,8 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] `make gallery` renders every screen and validates real pixels.
 - [x] Release build has 0 warnings and 0 errors.
 - [x] Plan checklist is complete for M0-M5.
-- [x] A windowed screenshot and the headless Playtest output are included as
-      visible proof.
+- [x] A windowed screenshot, `make watch` autoplay and the headless Playtest
+      output are included as visible proof.
 
 ### Post-v1 backlog
 

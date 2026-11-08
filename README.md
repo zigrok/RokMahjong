@@ -24,6 +24,7 @@ post-v1 backlog.
 ```bash
 make build
 make run
+make watch LEVEL=1   # watch the solver play a level in a real window
 ```
 
 Mouse: click or drag matching tiles. Keyboard: arrows/Tab to move, Enter to
@@ -104,6 +105,7 @@ make run                # launch the desktop game
 make test               # core + game tests
 make test-all           # whole solution
 make playtest LEVEL=1 DEVICE=mouse
+make watch LEVEL=1      # auto-solve a level in a real window
 make gallery            # capture and validate screenshots
 make check-submodules   # verify pins are reachable
 ```
