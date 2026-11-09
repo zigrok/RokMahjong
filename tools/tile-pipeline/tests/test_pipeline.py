@@ -167,6 +167,15 @@ def test_choose_glyph_layer_prefers_the_glyph_over_the_body() -> None:
     assert index == 2
 
 
+def test_drop_desaturated_removes_the_painted_shadow() -> None:
+    image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    image.putpixel((0, 0), (120, 110, 100, 180))  # desaturated shadow
+    image.putpixel((1, 0), (170, 40, 45, 255))    # vermilion ink
+    cleaned = glyphs.drop_desaturated(image)
+    assert cleaned.getpixel((0, 0))[3] == 0
+    assert cleaned.getpixel((1, 0))[3] == 255
+
+
 def test_clean_alpha_drops_faint_residual() -> None:
     image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
     image.putpixel((0, 0), (255, 0, 0, 10))

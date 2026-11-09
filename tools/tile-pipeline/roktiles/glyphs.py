@@ -83,6 +83,30 @@ def has_transparency(data: bytes) -> bool:
     return stats.transparency > 0.02
 
 
+def drop_desaturated(
+    image: Image.Image, min_saturation: float = 0.32, max_alpha: int = 235
+) -> Image.Image:
+    """Remove the painted tile's drop shadow from a decomposed glyph layer.
+
+    The layered model leaves a soft, desaturated shadow around the strokes.
+    Ink is strongly saturated (red, green, blue, gold), so desaturated pixels
+    can be made fully transparent.
+    """
+    rgba = image.convert("RGBA")
+    pixels = rgba.load()
+    for y in range(rgba.height):
+        for x in range(rgba.width):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha == 0 or alpha >= max_alpha:
+                continue
+            high = max(red, green, blue)
+            low = min(red, green, blue)
+            saturation = 0.0 if high == 0 else (high - low) / high
+            if saturation < min_saturation:
+                pixels[x, y] = (red, green, blue, 0)
+    return rgba
+
+
 def clean_alpha(image: Image.Image, low: int = 28, high: int = 210) -> Image.Image:
     """Drop the faint residual alpha left by the layered decomposition."""
     alpha = image.getchannel("A")

@@ -91,7 +91,7 @@ def _fit_canvas(image: Image.Image, size: tuple[int, int], fill: float = 0.82) -
 
 
 def _apply_glyph(label: str, generation: store.Generation, image: Image.Image) -> None:
-    rgba = image.convert("RGBA")
+    rgba = glyphs.drop_desaturated(image)
     rgba.putalpha(glyphs.clean_alpha(rgba))
     canvas = _fit_canvas(rgba, config.GLYPH_SIZE)
     glyph_path = config.GLYPH_DIR / f"{label}.png"

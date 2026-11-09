@@ -24,9 +24,8 @@ public sealed record GlyphTexture(int Width, int Height, byte[] Rgba, bool HasAl
 public static class TileRenderer
 {
     private const float TileWidth = 1.0f;
-    private const float TileDepth = 0.55f;
-    private const float EdgeRadius = 0.065f;
-    private const float HeightScale = 0.006f;
+    private const float TileDepth = 0.20f;
+    private const float EdgeRadius = 0.045f;
     private const float FieldOfViewDegrees = 22f;
 
     public static byte[] RenderCell(
@@ -37,8 +36,8 @@ public static class TileRenderer
         int faceWidth,
         int faceHeight,
         GlyphTexture glyph,
-        float yawDegrees = -16f,
-        float pitchDegrees = 10f,
+        float yawDegrees = -14f,
+        float pitchDegrees = 8f,
         int supersample = 2)
     {
         var tileHeight = TileWidth * faceHeight / faceWidth;
@@ -170,39 +169,15 @@ public static class TileRenderer
         v = Math.Clamp(v, 0f, 1f);
 
         var albedo = isFace
-            ? new Vector3(0.96f, 0.93f, 0.86f)
-            : new Vector3(0.80f, 0.72f, 0.60f);
-        var height = 0.5f;
-        var gradient = 0f;
-
+            ? new Vector3(1.00f, 0.97f, 0.90f)
+            : new Vector3(0.97f, 0.95f, 0.88f);
         if (isFace)
         {
             var texel = SampleGlyph(glyph, u, v);
             var alpha = texel.W;
-            if (glyph.HasAlpha)
-            {
-                albedo = Vector3.Lerp(albedo, new Vector3(texel.X, texel.Y, texel.Z), alpha);
-            }
-            else
-            {
-                albedo = new Vector3(texel.X, texel.Y, texel.Z);
-            }
-
-            height = SampleHeight(glyph, blurredHeight, u, v);
-            var step = 1.5f / Math.Max(glyph.Width, glyph.Height);
-            var left = SampleHeight(glyph, blurredHeight, Math.Clamp(u - step, 0f, 1f), v);
-            var right = SampleHeight(glyph, blurredHeight, Math.Clamp(u + step, 0f, 1f), v);
-            var up = SampleHeight(glyph, blurredHeight, u, Math.Clamp(v - step, 0f, 1f));
-            var down = SampleHeight(glyph, blurredHeight, u, Math.Clamp(v + step, 0f, 1f));
-            var dhdu = (right - left) / (2f * step);
-            var dhdv = (down - up) / (2f * step);
-            gradient = MathF.Sqrt(dhdu * dhdu + dhdv * dhdv);
-
-            var bump = new Vector3(
-                -HeightScale * dhdu / TileWidth,
-                HeightScale * dhdv / TileHeightFrom(halfExtents),
-                1f);
-            localNormal = Vector3.Normalize(Vector3.Lerp(localNormal, Vector3.Normalize(bump), 0.85f));
+            albedo = glyph.HasAlpha
+                ? Vector3.Lerp(albedo, new Vector3(texel.X, texel.Y, texel.Z), alpha)
+                : new Vector3(texel.X, texel.Y, texel.Z);
         }
 
         var normal = Vector3.Normalize(Vector3.TransformNormal(localNormal, rotation));
@@ -217,11 +192,13 @@ public static class TileRenderer
         var specular = MathF.Pow(MathF.Max(Vector3.Dot(normal, half), 0f), 42f) * 0.45f;
 
         var ambientOcclusion = AmbientOcclusion(localPoint, halfExtents, localNormal);
-        var crease = isFace ? Math.Clamp(1f - gradient * 0.015f, 0.85f, 1f) : 1f;
-        var relief = isFace ? 1f + (height - 0.5f) * 0.04f : 1f;
 
-        var light = 0.24f * ambientOcclusion + keyDiffuse * 0.88f + fillDiffuse * 0.10f;
-        var color = albedo * light * crease * relief + new Vector3(specular);
+        // The face is lit like painted porcelain; the acrylic side stays bright
+        // and picks up a little top-light gradient instead of going dark.
+        var light = isFace
+            ? 0.40f * ambientOcclusion + keyDiffuse * 0.72f + fillDiffuse * 0.10f
+            : 0.80f + 0.12f * MathF.Max(normal.Y, 0f) + keyDiffuse * 0.10f;
+        var color = albedo * light + new Vector3(specular);
 
         // Slight warm bounce from the ivory body onto the glyph.
         color += new Vector3(0.02f, 0.018f, 0.012f) * ambientOcclusion;

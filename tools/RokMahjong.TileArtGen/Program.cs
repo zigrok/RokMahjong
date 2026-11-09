@@ -250,12 +250,12 @@ void DrawCell(SKCanvas canvas, int index, byte[] cell)
 
     using (var shadow = new SKPaint
            {
-               Color = new SKColor(0, 0, 0, 70),
+               Color = new SKColor(0, 0, 0, 42),
                IsAntialias = true,
-               MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 8),
+               MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 6),
            })
         canvas.DrawRoundRect(
-            new SKRect(faceRect.Left + 8, faceRect.Top + 14, faceRect.Right + 10, faceRect.Bottom + 14),
+            new SKRect(faceRect.Left + 4, faceRect.Top + 7, faceRect.Right + 6, faceRect.Bottom + 7),
             16,
             16,
             shadow);
