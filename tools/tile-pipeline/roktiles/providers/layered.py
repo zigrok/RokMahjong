@@ -174,6 +174,7 @@ class LayeredProvider:
                 "vae": self.vae,
                 "layers": len(layers),
                 "glyph_layer": index,
+                "layers_dir": save_dir,
                 "layer_stats": [layer.as_dict() for layer in stats],
                 "steps": int(options.get("steps", 20)),
                 "cfg": float(options.get("cfg", 2.5)),

@@ -60,10 +60,12 @@ def choose_glyph_layer(layers: list[bytes]) -> tuple[int, LayerStats, list[Layer
     stats = analyse(layers)
     # A decomposition can yield the tile body and the glyph as separate
     # transparent layers. The glyph is the smaller substantial one.
+    # Ignore near-empty layers (they can be < 5% ink and would win a
+    # smallest-coverage test) and fully opaque backgrounds.
     candidates = [
         layer
         for layer in stats
-        if layer.transparency > 0.02 and 0.02 < layer.coverage < 0.9
+        if layer.transparency > 0.02 and 0.05 < layer.coverage < 0.9
     ]
     best = (
         min(candidates, key=lambda layer: layer.coverage)

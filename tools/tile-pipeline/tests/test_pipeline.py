@@ -142,6 +142,31 @@ def test_choose_glyph_layer_picks_the_foreground() -> None:
     assert len(stats) == 2
 
 
+def test_choose_glyph_layer_ignores_near_empty_layers() -> None:
+    background = Image.new("RGBA", (64, 64), (250, 245, 220, 255))
+    empty = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    glyph = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(glyph).rectangle((16, 16, 48, 48), fill=(180, 40, 60, 255))
+
+    index, _best, _stats = glyphs.choose_glyph_layer(
+        [_png(background), _png(empty), _png(glyph)]
+    )
+    assert index == 2
+
+
+def test_choose_glyph_layer_prefers_the_glyph_over_the_body() -> None:
+    background = Image.new("RGBA", (64, 64), (250, 245, 220, 255))
+    body = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(body).rectangle((4, 4, 60, 60), fill=(220, 200, 160, 255))
+    glyph = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(glyph).rectangle((24, 24, 40, 40), fill=(180, 40, 60, 255))
+
+    index, _best, _stats = glyphs.choose_glyph_layer(
+        [_png(background), _png(body), _png(glyph)]
+    )
+    assert index == 2
+
+
 def test_clean_alpha_drops_faint_residual() -> None:
     image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
     image.putpixel((0, 0), (255, 0, 0, 10))
