@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .. import config
 from ..glyphs import choose_glyph_layer
 from .base import GenerationOutput, GenerationRequest, ProviderError
@@ -152,6 +154,12 @@ class LayeredProvider:
             raise ProviderError(f"Qwen-Image-Layered produced no layers: {entry}")
 
         layers = [download_image(self.base_url, info) for info in images]
+        save_dir = options.get("save_layers_dir")
+        if save_dir:
+            directory = Path(save_dir)
+            directory.mkdir(parents=True, exist_ok=True)
+            for layer_index, data in enumerate(layers):
+                (directory / f"layer_{layer_index}.png").write_bytes(data)
         index, best, stats = choose_glyph_layer(layers)
         chosen = layers[index]
 

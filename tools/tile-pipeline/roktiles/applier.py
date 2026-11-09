@@ -71,16 +71,29 @@ def crop_to_artwork(image: Image.Image, inset: float = 0.015) -> Image.Image:
     return rgb.crop((left + dx, top + dy, right - dx, bottom - dy))
 
 
-def _fit_canvas(image: Image.Image, size: tuple[int, int]) -> Image.Image:
-    copy = image.copy()
-    copy.thumbnail(size, Image.LANCZOS)
+def _fit_canvas(image: Image.Image, size: tuple[int, int], fill: float = 0.82) -> Image.Image:
+    """Crop to the glyph and scale it to a consistent share of the face."""
+    bounds = image.convert("RGBA").getchannel("A").getbbox()
+    if bounds:
+        image = image.crop(bounds)
+    max_width = max(1, int(size[0] * fill))
+    max_height = max(1, int(size[1] * fill))
+    scale = min(max_width / image.width, max_height / image.height)
+    resized = image.resize(
+        (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
+        Image.LANCZOS,
+    )
     canvas = Image.new("RGBA", size, (0, 0, 0, 0))
-    canvas.alpha_composite(copy, ((size[0] - copy.width) // 2, (size[1] - copy.height) // 2))
+    canvas.alpha_composite(
+        resized, ((size[0] - resized.width) // 2, (size[1] - resized.height) // 2)
+    )
     return canvas
 
 
 def _apply_glyph(label: str, generation: store.Generation, image: Image.Image) -> None:
-    canvas = _fit_canvas(image.convert("RGBA"), config.GLYPH_SIZE)
+    rgba = image.convert("RGBA")
+    rgba.putalpha(glyphs.clean_alpha(rgba))
+    canvas = _fit_canvas(rgba, config.GLYPH_SIZE)
     glyph_path = config.GLYPH_DIR / f"{label}.png"
     height_path = config.GLYPH_DIR / f"{label}.height.png"
     canvas.save(glyph_path, format="PNG", optimize=True)

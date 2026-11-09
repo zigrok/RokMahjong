@@ -1,0 +1,18 @@
+{
+  "C1": {
+    "kind": "glyph",
+    "generation": "g-deb1b36b",
+    "run": "r-b91bd425",
+    "provider": "layered",
+    "model": "qwen-image-layered-Q4_K_M.gguf",
+    "style": "porcelain",
+    "seed": 297322814,
+    "prompt": "Split this mahjong tile into three layers. Layer 1: the plain background. Layer 2: the ceramic tile body with its gold border and bevel. Layer 3: only the painted glyph strokes on a fully transparent background, with no tile surface, no border and no shadow. Keep the exact shapes, colours and proportions of the glyph.",
+    "layer": 2,
+    "width": 512,
+    "height": 704,
+    "heightMap": "assets/art/glyphs/C1.height.png",
+    "createdAt": "2026-11-09T01:49:52+00:00",
+    "source": "artifacts/tile-pipeline/history/r-b91bd425/C1_g-deb1b36b.png"
+  }
+}

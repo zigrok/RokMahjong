@@ -821,8 +821,11 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] Glyph albedo + height map pipeline (Qwen-Image-Layered provider).
 - [x] `roktiles decompose` extracts a transparent glyph from a generated tile.
 - [x] Layered model runs from the Q4_K_M GGUF (fp8 cannot run on MPS).
+- [x] Selected glyphs are alpha-cleaned, cropped and size-normalized before use.
+- [x] 3D tile face relief is subtle so the glyph reads as painted, not a sticker.
 - [ ] Verify the 4-step Lightning LoRA path with a downloaded model.
-- [ ] Verify Qwen-Image-Layered end to end on this machine.
+- [x] Verify Qwen-Image-Layered end to end on this machine (3-layer split,
+      432 px source, 26 s/step on MPS).
 - [~] Generate, review and select the full 42-face porcelain set (4/42).
 - [ ] Compare `lacquer`, `ink` and `jade` styles and sign off the final look.
 - [ ] Exercise the OpenRouter adapter with a real key and model.

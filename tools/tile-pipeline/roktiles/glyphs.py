@@ -58,9 +58,15 @@ def choose_glyph_layer(layers: list[bytes]) -> tuple[int, LayerStats, list[Layer
         raise ValueError("No layers to choose from.")
 
     stats = analyse(layers)
-    candidates = [layer for layer in stats if layer.transparency > 0.02 and layer.coverage < 0.9]
+    # A decomposition can yield the tile body and the glyph as separate
+    # transparent layers. The glyph is the smaller substantial one.
+    candidates = [
+        layer
+        for layer in stats
+        if layer.transparency > 0.02 and 0.02 < layer.coverage < 0.9
+    ]
     best = (
-        max(candidates, key=lambda layer: layer.coverage)
+        min(candidates, key=lambda layer: layer.coverage)
         if candidates
         else max(stats, key=lambda layer: layer.transparency)
     )
@@ -73,6 +79,17 @@ def has_transparency(data: bytes) -> bool:
     except OSError:
         return False
     return stats.transparency > 0.02
+
+
+def clean_alpha(image: Image.Image, low: int = 28, high: int = 210) -> Image.Image:
+    """Drop the faint residual alpha left by the layered decomposition."""
+    alpha = image.getchannel("A")
+    span = max(1, high - low)
+    lookup = [
+        0 if value <= low else 255 if value >= high else int((value - low) * 255 / span)
+        for value in range(256)
+    ]
+    return alpha.point(lookup)
 
 
 def derive_height(image: Image.Image, blur_radius: int = 9) -> Image.Image:

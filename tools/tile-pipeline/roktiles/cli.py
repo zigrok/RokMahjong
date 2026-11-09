@@ -106,7 +106,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
     if args.dry_run:
         for face in selected_faces:
             if args.provider == "layered":
-                prompt, negative = build_decomposition_prompt(args.extra or "")
+                prompt, negative = build_decomposition_prompt(args.extra or "", args.layers)
             else:
                 prompt, negative = build_prompt(face, args.style, args.extra or "")
             print(f"\n[{face.label}] {face.description}\n  {prompt}")
@@ -141,7 +141,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
             continue
 
         if args.provider == "layered":
-            prompt, negative = build_decomposition_prompt(args.extra or "")
+            prompt, negative = build_decomposition_prompt(args.extra or "", args.layers)
         else:
             prompt, negative = build_prompt(face, args.style, args.extra or "")
         started = time.monotonic()
@@ -407,8 +407,9 @@ def cmd_decompose(args: argparse.Namespace) -> int:
         return 1
 
     options = _provider_options(args)
+    options["save_layers_dir"] = str(config.HISTORY_DIR / "layers" / _id("layers"))
     provider = create_provider("layered", args.model, options=options)
-    prompt, negative = build_decomposition_prompt(args.extra or "")
+    prompt, negative = build_decomposition_prompt(args.extra or "", args.layers)
     seed = args.seed if args.seed is not None else parent.seed
 
     run_id = _id("r")
@@ -423,11 +424,20 @@ def cmd_decompose(args: argparse.Namespace) -> int:
     run_dir = config.HISTORY_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    reference = parent.image_path
+    if args.max_size > 0:
+        with Image.open(parent.image_path) as source:
+            if max(source.size) > args.max_size:
+                scaled = source.copy()
+                scaled.thumbnail((args.max_size, args.max_size), Image.LANCZOS)
+                reference = run_dir / f"{parent.face}_reference.png"
+                scaled.save(reference)
+
     print(f"  decomposing {parent.id} ({parent.face}) seed={seed} … ", end="", flush=True)
     started = time.monotonic()
     try:
         request = GenerationRequest(
-            reference=parent.image_path,
+            reference=reference,
             prompt=prompt,
             negative_prompt=negative,
             seed=seed,
@@ -655,6 +665,12 @@ def build_parser() -> argparse.ArgumentParser:
     decompose_parser.add_argument("--width", type=int, default=832)
     decompose_parser.add_argument("--height", type=int, default=1152)
     decompose_parser.add_argument("--extra", default="")
+    decompose_parser.add_argument(
+        "--max-size",
+        type=int,
+        default=0,
+        help="downscale the source before decomposing (attention memory scales with tokens^2)",
+    )
     decompose_parser.set_defaults(func=cmd_decompose)
 
     sheet_parser = subparsers.add_parser(

@@ -1,5 +1,6 @@
 {
   "B3": {
+    "kind": "legacy-face",
     "generation": "g-bed2b391",
     "run": "r-2775b436",
     "provider": "comfyui",
@@ -12,20 +13,8 @@
     "createdAt": "2026-11-08T21:05:43+00:00",
     "source": "artifacts/tile-pipeline/history/r-2775b436/B3_g-bed2b391.png"
   },
-  "C1": {
-    "generation": "g-fd8a0e00",
-    "run": "r-2775b436",
-    "provider": "comfyui",
-    "model": "qwen-image-edit-2511-Q4_K_M.gguf",
-    "style": "porcelain",
-    "seed": 297322814,
-    "prompt": "Repaint this mahjong tile as a hand-painted antique Chinese porcelain mahjong tile with a softly beveled edge and a thin gold rule around the face, warm ivory glaze, deep vermilion red and jade green mineral pigments, fine gold-leaf outlines, subtle enamel texture. Preserve the exact subject, layout, count and proportions of every element: the Chinese numeral \u4e00 stacked above the Chinese character \u842c, every stroke of both characters in the same deep vermilion red with no green, split by a thin horizontal divider line. Do not add, remove or merge any element. One single upright tile with a rounded rectangular outline, exactly like the input, centred on a plain warm ivory background, flat straight-on front view, no perspective, crisp legible detail, consistent line weight.",
-    "width": 416,
-    "height": 576,
-    "createdAt": "2026-11-08T20:56:27+00:00",
-    "source": "artifacts/tile-pipeline/history/r-2775b436/C1_g-fd8a0e00.png"
-  },
   "D5": {
+    "kind": "legacy-face",
     "generation": "g-812344b2",
     "run": "r-27a21bfa",
     "provider": "comfyui",
@@ -39,6 +28,7 @@
     "source": "artifacts/tile-pipeline/history/r-27a21bfa/D5_g-812344b2.png"
   },
   "E": {
+    "kind": "legacy-face",
     "generation": "g-9b62b193",
     "run": "r-dddab664",
     "provider": "comfyui",

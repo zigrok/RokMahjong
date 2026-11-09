@@ -117,8 +117,17 @@ _DECOMPOSE_NEGATIVE = (
 )
 
 
-def build_decomposition_prompt(extra: str = "") -> tuple[str, str]:
-    prompt = _DECOMPOSE_PROMPT
+_DECOMPOSE_THREE_PROMPT = (
+    "Split this mahjong tile into three layers. Layer 1: the plain background. "
+    "Layer 2: the ceramic tile body with its gold border and bevel. Layer 3: "
+    "only the painted glyph strokes on a fully transparent background, with no "
+    "tile surface, no border and no shadow. Keep the exact shapes, colours and "
+    "proportions of the glyph."
+)
+
+
+def build_decomposition_prompt(extra: str = "", layers: int = 2) -> tuple[str, str]:
+    prompt = _DECOMPOSE_THREE_PROMPT if layers >= 3 else _DECOMPOSE_PROMPT
     if extra:
         prompt = f"{prompt} {extra.strip()}"
     return prompt, _DECOMPOSE_NEGATIVE

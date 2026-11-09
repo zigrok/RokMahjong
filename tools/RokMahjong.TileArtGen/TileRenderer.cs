@@ -26,7 +26,7 @@ public static class TileRenderer
     private const float TileWidth = 1.0f;
     private const float TileDepth = 0.55f;
     private const float EdgeRadius = 0.065f;
-    private const float HeightScale = 0.012f;
+    private const float HeightScale = 0.006f;
     private const float FieldOfViewDegrees = 22f;
 
     public static byte[] RenderCell(
@@ -217,8 +217,8 @@ public static class TileRenderer
         var specular = MathF.Pow(MathF.Max(Vector3.Dot(normal, half), 0f), 42f) * 0.45f;
 
         var ambientOcclusion = AmbientOcclusion(localPoint, halfExtents, localNormal);
-        var crease = isFace ? Math.Clamp(1f - gradient * 0.06f, 0.55f, 1f) : 1f;
-        var relief = isFace ? 0.86f + height * 0.18f : 1f;
+        var crease = isFace ? Math.Clamp(1f - gradient * 0.015f, 0.85f, 1f) : 1f;
+        var relief = isFace ? 1f + (height - 0.5f) * 0.04f : 1f;
 
         var light = 0.24f * ambientOcclusion + keyDiffuse * 0.88f + fillDiffuse * 0.10f;
         var color = albedo * light * crease * relief + new Vector3(specular);

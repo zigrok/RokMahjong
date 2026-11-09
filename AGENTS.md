@@ -189,7 +189,7 @@ live in `RokMahjong.Game`.
 ```bash
 cd tools/tile-pipeline
 uv run roktiles generate --face C1 --style porcelain
-uv run roktiles generate --face C1 --provider layered --style porcelain
+uv run roktiles decompose <generation-id> --layers 3 --max-size 432
 uv run roktiles history --face C1
 uv run roktiles sheet --face C1 --open
 uv run roktiles select <generation-id>

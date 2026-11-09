@@ -98,14 +98,30 @@ with Qwen-Image-Edit 2511, then decompose it into a transparent glyph.
 
 ```bash
 uv run roktiles generate --face C1 --style porcelain     # painted tile
-uv run roktiles decompose <generation-id>                 # RGBA glyph
+uv run roktiles decompose <generation-id> --layers 3 --max-size 432
 uv run roktiles select <glyph-generation-id>              # apply + rebuild
 ```
 
-`decompose` runs the official *Image to Layers* graph, keeps the foreground
-glyph layer (the fully opaque background layer is discarded) and stores it as a
-new generation with `glyph_layer`, `layer_stats` and `parent` in its parameters.
-It can also be pointed at any earlier generation.
+`--layers 3` matters: with two layers the model separates *tile object* from
+background; with three it separates background, tile body and the painted glyph
+strokes, which is the layer we keep.
+
+`--max-size` downscales the source before decomposition. Attention cost grows
+with the square of the token count, so 432 px runs around 26 s/step while
+416 px needs ~185 s/step and ~38 GB of unified memory. The chosen layer is
+upscaled to the 512×704 glyph texture. On a 36 GB Mac, 432 px fits comfortably;
+576 px needs roughly 10 GB free.
+
+`decompose` runs the official *Image to Layers* graph, keeps the smallest
+substantial transparent layer (the glyph, not the tile body or the opaque
+background) and stores it as a new generation with `glyph_layer`, `layer_stats`
+and `parent` in its parameters. Every returned layer is also written under
+`artifacts/tile-pipeline/history/layers/` for inspection. It can be pointed at
+any earlier generation.
+
+Selected glyphs are alpha-cleaned (the decomposition leaves faint residual
+alpha), cropped to their content and scaled to a consistent share of the face
+before they are written to `assets/art/glyphs/`.
 
 `--provider layered` on `generate` does the same thing directly against the
 reference image, which is useful for checking the graph or extracting the
