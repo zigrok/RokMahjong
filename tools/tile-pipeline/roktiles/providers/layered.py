@@ -30,11 +30,18 @@ def build_layered_workflow(
     filename_prefix: str,
 ) -> dict:
     """The official Image-to-Layers (Qwen-Image-Layered) graph."""
-    return {
-        "1": {
+    # MPS cannot execute float8 weights, so the layered model is normally the
+    # GGUF build. Fall back to the safetensors loader for a bf16/fp16 file.
+    model_node = (
+        {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": unet}}
+        if unet.endswith(".gguf")
+        else {
             "class_type": "UNETLoader",
             "inputs": {"unet_name": unet, "weight_dtype": "default"},
-        },
+        }
+    )
+    return {
+        "1": model_node,
         "2": {
             "class_type": "CLIPLoader",
             "inputs": {"clip_name": clip, "type": "qwen_image", "device": "default"},

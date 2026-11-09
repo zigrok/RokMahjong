@@ -41,7 +41,7 @@ COMFYUI_CLIP = os.environ.get(
 COMFYUI_VAE = os.environ.get("ROKTILES_VAE", "qwen_image_vae.safetensors")
 COMFYUI_LORA = os.environ.get("ROKTILES_LORA", "")
 COMFYUI_LAYERED_UNET = os.environ.get(
-    "ROKTILES_LAYERED_UNET", "qwen_image_layered_fp8mixed.safetensors"
+    "ROKTILES_LAYERED_UNET", "qwen-image-layered-Q4_K_M.gguf"
 )
 COMFYUI_LAYERED_VAE = os.environ.get(
     "ROKTILES_LAYERED_VAE", "qwen_image_layered_vae.safetensors"

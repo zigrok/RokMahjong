@@ -14,7 +14,12 @@ from PIL import Image
 
 from . import applier, config, faces as face_catalog, store, sheet
 from .faces import Face
-from .prompts import DEFAULT_STYLE, STYLES, build_prompt
+from .prompts import (
+    DEFAULT_STYLE,
+    STYLES,
+    build_decomposition_prompt,
+    build_prompt,
+)
 from .providers import PROVIDERS, GenerationRequest, create_provider
 
 
@@ -100,7 +105,10 @@ def cmd_generate(args: argparse.Namespace) -> int:
     print(f"style: {args.style} — {STYLES[args.style].summary}")
     if args.dry_run:
         for face in selected_faces:
-            prompt, negative = build_prompt(face, args.style, args.extra or "")
+            if args.provider == "layered":
+                prompt, negative = build_decomposition_prompt(args.extra or "")
+            else:
+                prompt, negative = build_prompt(face, args.style, args.extra or "")
             print(f"\n[{face.label}] {face.description}\n  {prompt}")
         return 0
 
@@ -132,7 +140,10 @@ def cmd_generate(args: argparse.Namespace) -> int:
                 break
             continue
 
-        prompt, negative = build_prompt(face, args.style, args.extra or "")
+        if args.provider == "layered":
+            prompt, negative = build_decomposition_prompt(args.extra or "")
+        else:
+            prompt, negative = build_prompt(face, args.style, args.extra or "")
         started = time.monotonic()
         print(f"  [{index}/{len(selected_faces)}] {face.label} seed={seed} … ", end="", flush=True)
         try:
@@ -386,6 +397,80 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_decompose(args: argparse.Namespace) -> int:
+    parent = store.get_generation(args.id)
+    if parent is None:
+        print(f"unknown generation: {args.id}", file=sys.stderr)
+        return 1
+    if not parent.exists():
+        print(f"generation image is missing: {parent.image_path}", file=sys.stderr)
+        return 1
+
+    options = _provider_options(args)
+    provider = create_provider("layered", args.model, options=options)
+    prompt, negative = build_decomposition_prompt(args.extra or "")
+    seed = args.seed if args.seed is not None else parent.seed
+
+    run_id = _id("r")
+    store.create_run(
+        run_id,
+        provider.name,
+        provider.model,
+        str(parent.params.get("style", "decompose")),
+        {"parent": parent.id, "steps": args.steps, "cfg": args.cfg, "layers": args.layers},
+    )
+    config.ensure_directories()
+    run_dir = config.HISTORY_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"  decomposing {parent.id} ({parent.face}) seed={seed} … ", end="", flush=True)
+    started = time.monotonic()
+    try:
+        request = GenerationRequest(
+            reference=parent.image_path,
+            prompt=prompt,
+            negative_prompt=negative,
+            seed=seed,
+            options=options,
+        )
+        output = provider.generate(request)
+    except Exception as error:  # noqa: BLE001 - report and stop
+        print("failed")
+        print(f"    {type(error).__name__}: {error}", file=sys.stderr)
+        return 1
+
+    elapsed = time.monotonic() - started
+    generation_id = _id("g")
+    image_path = run_dir / f"{parent.face}_{generation_id}.png"
+    image_path.write_bytes(output.image)
+    with Image.open(io.BytesIO(output.image)) as image:
+        width, height = image.size
+
+    params = {
+        "provider": provider.name,
+        "model": provider.model,
+        "style": parent.params.get("style", ""),
+        "parent": parent.id,
+        **output.meta,
+    }
+    store.add_generation(
+        generation_id=generation_id,
+        run_id=run_id,
+        face=parent.face,
+        image_path=image_path,
+        width=width,
+        height=height,
+        prompt=prompt,
+        negative_prompt=negative,
+        seed=seed,
+        params=params,
+        duration_ms=int(elapsed * 1000),
+    )
+    print(f"{generation_id} ({width}x{height}, {elapsed:.1f}s, layer {output.meta.get('glyph_layer')})")
+    print(f"  select with: roktiles select {generation_id}")
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     config.ensure_directories()
     generations = store.list_generations(limit=None)
@@ -553,6 +638,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser("status", help="pipeline overview")
     status_parser.set_defaults(func=cmd_status)
+
+    decompose_parser = subparsers.add_parser(
+        "decompose", help="extract a transparent glyph from an existing generation"
+    )
+    decompose_parser.add_argument("id", help="parent generation id")
+    decompose_parser.add_argument("--model", default=None)
+    decompose_parser.add_argument("--steps", type=int, default=20)
+    decompose_parser.add_argument("--cfg", type=float, default=2.5)
+    decompose_parser.add_argument("--layers", type=int, default=2)
+    decompose_parser.add_argument("--shift", type=float, default=1.0)
+    decompose_parser.add_argument("--denoise", type=float, default=1.0)
+    decompose_parser.add_argument("--sampler", default="euler")
+    decompose_parser.add_argument("--scheduler", default="simple")
+    decompose_parser.add_argument("--seed", type=int, default=None)
+    decompose_parser.add_argument("--width", type=int, default=832)
+    decompose_parser.add_argument("--height", type=int, default=1152)
+    decompose_parser.add_argument("--extra", default="")
+    decompose_parser.set_defaults(func=cmd_decompose)
 
     sheet_parser = subparsers.add_parser(
         "sheet", help="render a contact sheet of generations"

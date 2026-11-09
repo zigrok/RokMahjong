@@ -81,7 +81,7 @@ Models are selected with environment variables:
 | `ROKTILES_CLIP` | `qwen_2.5_vl_7b_fp8_scaled.safetensors` |
 | `ROKTILES_VAE` | `qwen_image_vae.safetensors` |
 | `ROKTILES_LORA` | empty (no LoRA) |
-| `ROKTILES_LAYERED_UNET` | `qwen_image_layered_fp8mixed.safetensors` |
+| `ROKTILES_LAYERED_UNET` | `qwen-image-layered-Q4_K_M.gguf` |
 | `ROKTILES_LAYERED_VAE` | `qwen_image_layered_vae.safetensors` |
 | `ROKTILES_TIMEOUT` | `1800` seconds |
 
@@ -92,18 +92,30 @@ maximum fidelity).
 
 ## Transparent glyphs (Qwen-Image-Layered)
 
-`--provider layered` runs the official *Image to Layers* graph. It takes the
-same body-less reference, splits it into two RGBA layers, and keeps the
-foreground glyph layer (the fully opaque background layer is discarded). The
-result is a transparent glyph that the 3D tile can wear directly.
+Qwen-Image-Layered splits an existing image into RGBA layers; it does not
+restyle. The recommended flow is therefore two steps: generate a painted tile
+with Qwen-Image-Edit 2511, then decompose it into a transparent glyph.
 
 ```bash
-uv run roktiles generate --face C1 --provider layered --style porcelain
+uv run roktiles generate --face C1 --style porcelain     # painted tile
+uv run roktiles decompose <generation-id>                 # RGBA glyph
+uv run roktiles select <glyph-generation-id>              # apply + rebuild
 ```
 
-Models live in `models/diffusion_models/qwen_image_layered_fp8mixed.safetensors`
-and `models/vae/qwen_image_layered_vae.safetensors` (Comfy-Org). The provider is
-the only one that returns real alpha; the 2511 edit model decodes RGB.
+`decompose` runs the official *Image to Layers* graph, keeps the foreground
+glyph layer (the fully opaque background layer is discarded) and stores it as a
+new generation with `glyph_layer`, `layer_stats` and `parent` in its parameters.
+It can also be pointed at any earlier generation.
+
+`--provider layered` on `generate` does the same thing directly against the
+reference image, which is useful for checking the graph or extracting the
+vector glyph, but it will not carry a 2511 style.
+
+Models live in `models/unet/qwen-image-layered-Q4_K_M.gguf` and
+`models/vae/qwen_image_layered_vae.safetensors`. The GGUF build is required on
+Apple Silicon: the fp8 safetensors cannot be dequantized on MPS
+(`Float8_e4m3fn` is unsupported). The provider is the only one that returns real
+alpha; the 2511 edit model decodes RGB.
 
 Selecting a transparent generation writes:
 
@@ -136,6 +148,7 @@ Add `--extra "…"` to append art direction to a single run.
 | `roktiles sheet --face C1 --open` | contact sheet of candidates |
 | `roktiles show <id> --open` | print a generation's path and prompt |
 | `roktiles runs` | list generation runs |
+| `roktiles decompose <id>` | extract a transparent glyph layer from a generation |
 | `roktiles select <id>…` | select generations, copy and rebuild the atlas |
 | `roktiles select-run <run>` | select every face produced by one run |
 | `roktiles apply` | re-apply the current selections and rebuild |

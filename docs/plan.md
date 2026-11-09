@@ -819,6 +819,8 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] Optional LoRA loading (4-step Lightning fast-batch recipe documented).
 - [x] 3D rounded-box tile mesh rendered at build time with SDF raymarching.
 - [x] Glyph albedo + height map pipeline (Qwen-Image-Layered provider).
+- [x] `roktiles decompose` extracts a transparent glyph from a generated tile.
+- [x] Layered model runs from the Q4_K_M GGUF (fp8 cannot run on MPS).
 - [ ] Verify the 4-step Lightning LoRA path with a downloaded model.
 - [ ] Verify Qwen-Image-Layered end to end on this machine.
 - [~] Generate, review and select the full 42-face porcelain set (4/42).

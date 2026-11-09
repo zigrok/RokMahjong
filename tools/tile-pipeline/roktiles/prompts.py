@@ -103,6 +103,27 @@ def build_prompt(face: Face, style: str = DEFAULT_STYLE, extra: str = "") -> tup
     return prompt, _NEGATIVE
 
 
+_DECOMPOSE_PROMPT = (
+    "Split this mahjong tile image into two layers. The foreground layer must "
+    "contain only the glyph artwork on a fully transparent background, keeping "
+    "the exact shapes, colours and proportions. The background layer contains "
+    "the plain tile face. No tile body, no border and no shadow in the "
+    "foreground layer."
+)
+
+_DECOMPOSE_NEGATIVE = (
+    "extra symbols, wrong glyph, missing character, invented symbols, blurry, "
+    "tile body, border, frame, shadow, watermark"
+)
+
+
+def build_decomposition_prompt(extra: str = "") -> tuple[str, str]:
+    prompt = _DECOMPOSE_PROMPT
+    if extra:
+        prompt = f"{prompt} {extra.strip()}"
+    return prompt, _DECOMPOSE_NEGATIVE
+
+
 def style_summary(style: str) -> str:
     preset = STYLES.get(style)
     return preset.summary if preset else style

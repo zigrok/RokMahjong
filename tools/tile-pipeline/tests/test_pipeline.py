@@ -33,6 +33,13 @@ def test_every_face_builds_a_prompt_with_its_subject() -> None:
         assert negative
 
 
+def test_decomposition_prompt_asks_for_a_transparent_foreground() -> None:
+    prompt, negative = prompts.build_decomposition_prompt()
+    assert "transparent background" in prompt
+    assert "foreground" in prompt
+    assert "shadow" in negative
+
+
 def test_unknown_style_is_rejected() -> None:
     with pytest.raises(ValueError):
         prompts.build_prompt(faces.FACES[0], "nonexistent")
@@ -98,12 +105,13 @@ def test_layered_workflow_splits_layers_into_a_batch() -> None:
         steps=20,
         cfg=2.5,
         layers=2,
-        unet="layered.safetensors",
+        unet="layered-Q4_K_M.gguf",
         clip="clip.safetensors",
         vae="layered_vae.safetensors",
         shift=1.0,
         filename_prefix="roktiles_layered",
     )
+    assert workflow["1"]["class_type"] == "UnetLoaderGGUF"
     assert workflow["6"]["class_type"] == "EmptyQwenImageLayeredLatentImage"
     assert workflow["6"]["inputs"]["layers"] == 2
     assert workflow["6"]["inputs"]["width"] == ["5", 0]
