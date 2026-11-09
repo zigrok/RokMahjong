@@ -20,13 +20,13 @@ roktiles select <generation>   RGBA + height → assets/art/glyphs/
                                opaque face   → assets/art/faces/ (retained)
         │
         ▼
-make tiles                     3D raymarched tile atlas
+make tiles                     extruded 2.5D tile atlas
 ```
 
-Tiles are real 3D meshes. `TileRenderer` (in `RokMahjong.TileArtGen`)
-raymarches a rounded-box tile with perspective, key/fill lighting, SDF ambient
-occlusion and a soft shadow. The pipeline only supplies the top-face texture,
-so the mesh, bevel and body stay consistent across every face.
+Tiles are an axis-aligned 2.5D extrusion (`RokMahjong.TileArtGen`): the top
+face is a perfect rounded rectangle and the right/bottom sides are a shaded band
+inside the same tile footprint. No perspective or camera skew. The pipeline only
+supplies the top-face texture, so the body stays consistent across every face.
 
 Selected art is cropped to its tile bounds (opaque faces) or kept as a
 transparent layer (glyphs) before it is committed.

@@ -340,9 +340,10 @@ The board computes a uniform scale from the available rectangle:
 
 A build-time tool renders one atlas with:
 
-- 42 tile cells. Each cell is a **real 3D render** of a rounded-box tile mesh,
-  raymarched with a perspective camera, key/fill lighting, SDF ambient
-  occlusion and a soft contact shadow. It is not hand-drawn 2.5D art.
+- 42 tile cells. Each cell is an **axis-aligned 2.5D extrusion**: the top face
+  is a perfect rounded rectangle (vertical and horizontal edges only), and the
+  right and bottom sides are a shaded band inside the same tile footprint. No
+  perspective, no camera skew.
 - The flat top face carries the face texture: an RGBA glyph from the pipeline,
   a retained legacy painted face, or the vector symbol as a fallback.
 - A height field (supplied as `<label>.height.png` or derived from the glyph
@@ -353,8 +354,8 @@ A build-time tool renders one atlas with:
 - Mipmapped, premultiplied alpha.
 - 6×7 cells at 256×340, with room for a second theme later.
 
-`TileRenderer` is deterministic and CPU-only, so `make tiles` needs no GPU and
-the atlas stays reproducible.
+The atlas builder is deterministic and CPU-only, so `make tiles` needs no GPU
+and the atlas stays reproducible.
 
 At runtime each tile is **one `DrawImage` call** with a transform. Selection,
 hint glow, drag highlight and particles use a small number of vector paths on top.
@@ -817,7 +818,7 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] Selected faces committed with a provenance manifest.
 - [x] Qwen-Image-Edit 2511 GGUF default workflow and style presets.
 - [x] Optional LoRA loading (4-step Lightning fast-batch recipe documented).
-- [x] 3D rounded-box tile mesh rendered at build time with SDF raymarching.
+- [x] Axis-aligned 2.5D tile extrusion (top face + right/bottom sides).
 - [x] Glyph albedo + height map pipeline (Qwen-Image-Layered provider).
 - [x] `roktiles decompose` extracts a transparent glyph from a generated tile.
 - [x] Layered model runs from the Q4_K_M GGUF (fp8 cannot run on MPS).

@@ -21,8 +21,9 @@ All of `art/` is generated. Do not hand-edit any of it.
 make tiles
 ```
 
-`tools/RokMahjong.TileArtGen` renders each cell as a real 3D tile: a rounded
-box raymarched with lighting, ambient occlusion and a soft shadow. It uses
+`tools/RokMahjong.TileArtGen` draws each cell as an axis-aligned 2.5D tile: a
+flat rounded-rectangle top face plus a shaded right/bottom side inside the tile
+footprint. It uses
 `art/glyphs/<label>.png` (RGBA) and `art/glyphs/<label>.height.png` when
 present, then a retained `art/faces/<label>.png`, then the vector symbol.
 

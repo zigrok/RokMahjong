@@ -179,8 +179,9 @@ live in `RokMahjong.Game`.
 
 ## Tile art rules
 
-- Tiles are real 3D meshes. `TileRenderer` raymarches a rounded-box tile at
-  build time; the pipeline supplies the top-face texture, not the tile body.
+- Tiles are an axis-aligned 2.5D extrusion: a perfectly rectangular top face
+  with a shaded right/bottom side inside the tile footprint. No perspective or
+  camera skew; the pipeline supplies the top-face texture, not the tile body.
 - Tile art is generated, not drawn with a font at runtime. The generator emits
   body-less reference art; the pipeline produces an RGBA glyph plus height map;
   the atlas textures the 3D top face with it.

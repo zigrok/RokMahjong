@@ -399,8 +399,8 @@ flowchart LR
     pipeline --> legacy[retained painted faces<br/>assets/art/faces]
     glyphs --> artTool
     legacy --> artTool
-    artTool --> raymarch[TileRenderer<br/>3D mesh raymarch]
-    raymarch --> atlasPng[tile-atlas.png]
+    artTool --> extrude[axis-aligned extrusion<br/>face + right/bottom side]
+    extrude --> atlasPng[tile-atlas.png]
     artTool --> atlasJson[tile-atlas.json<br/>cell/face/depth metadata]
     atlasPng --> mgcb[RokMahjong.Content MGCB]
     atlasJson --> mgcb

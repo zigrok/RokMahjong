@@ -163,9 +163,10 @@ Full details: [`docs/testing.md`](testing.md).
 
 ## Tile art
 
-Tiles are real 3D meshes: `TileRenderer` raymarches a rounded-box tile at build
-time with perspective, lighting, ambient occlusion and a soft shadow. The 42
-faces are AI-generated and chosen through a local-first pipeline. The generator
+Tiles are drawn as a 2.5D extrusion: the top face is a perfect axis-aligned
+rounded rectangle, and the right and bottom sides are a shaded band inside the
+same tile footprint. There is no perspective or camera skew. The 42 faces are
+AI-generated and chosen through a local-first pipeline. The generator
 emits body-less reference art for every face, and `tools/tile-pipeline` sends it
 to ComfyUI (Qwen-Image-Edit 2511 for painted tiles, Qwen-Image-Layered for
 transparent RGBA glyphs) or an optional OpenRouter image model. Every generation
