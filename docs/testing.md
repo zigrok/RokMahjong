@@ -97,7 +97,8 @@ network:
   node reference resolves);
 - the layered provider picks the transparent foreground layer, not the opaque
   background;
-- the derived height field tracks the glyph alpha;
+- the derived height field tracks the glyph alpha, and faint residual alpha is
+  cleaned before the glyph is written;
 - history and selection round-trip through SQLite;
 - `apply` crops the tile out of its background, normalizes face art, writes the
   provenance manifest and `reset` removes it;

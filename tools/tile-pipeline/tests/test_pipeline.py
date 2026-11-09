@@ -142,6 +142,15 @@ def test_choose_glyph_layer_picks_the_foreground() -> None:
     assert len(stats) == 2
 
 
+def test_clean_alpha_drops_faint_residual() -> None:
+    image = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    image.putpixel((0, 0), (255, 0, 0, 10))
+    image.putpixel((1, 0), (255, 0, 0, 120))
+    cleaned = glyphs.clean_alpha(image)
+    assert cleaned.getpixel((0, 0)) == 0
+    assert cleaned.getpixel((1, 0)) > 0
+
+
 def test_derive_height_tracks_the_glyph_alpha() -> None:
     image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     ImageDraw.Draw(image).rectangle((16, 16, 48, 48), fill=(180, 40, 60, 255))
