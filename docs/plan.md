@@ -338,19 +338,23 @@ The board computes a uniform scale from the available rectangle:
 
 ### Tile atlas
 
-A build-time tool produces one atlas with:
+A build-time tool renders one atlas with:
 
-- 42 face tiles.
-- A pre-composed 2.5D tile body: bevel, side faces, inner plate, baked shadow.
+- 42 tile cells. Each cell is a **real 3D render** of a rounded-box tile mesh,
+  raymarched with a perspective camera, key/fill lighting, SDF ambient
+  occlusion and a soft contact shadow. It is not hand-drawn 2.5D art.
+- The flat top face carries the face texture: an RGBA glyph from the pipeline,
+  a retained legacy painted face, or the vector symbol as a fallback.
+- A height field (supplied as `<label>.height.png` or derived from the glyph
+  alpha) bumps the glyph, so the symbol picks up real relief shading.
+- The tile silhouette is fit to the logical tile bounds, so the bevel and side
+  stay inside each tile slot on a packed board.
 - Metadata JSON: cell rect, face rect, depth margins, base size.
 - Mipmapped, premultiplied alpha.
 - 6×7 cells at 256×340, with room for a second theme later.
 
-The face art comes from the generation pipeline below. When
-`assets/art/faces/<label>.png` exists the generator draws it as the tile's top
-face over the vector side, bevel and shadow; otherwise it falls back to the
-vector symbol. Selected art is cropped to its tile bounds first, so the
-model's frame aligns with the atlas cell.
+`TileRenderer` is deterministic and CPU-only, so `make tiles` needs no GPU and
+the atlas stays reproducible.
 
 At runtime each tile is **one `DrawImage` call** with a transform. Selection,
 hint glow, drag highlight and particles use a small number of vector paths on top.
@@ -363,14 +367,17 @@ selects tile face art.
 - `assets/art/reference/<label>.png` — body-less vector reference art, emitted
   by `make tiles`, used as the structure image for every generation.
 - `roktiles generate` sends a face to ComfyUI (Qwen-Image-Edit 2511 GGUF by
-  default) or to an OpenRouter image model.
+  default), to Qwen-Image-Layered for a transparent glyph, or to an OpenRouter
+  image model.
 - Every generation is stored under `artifacts/tile-pipeline/history/` with a
   SQLite index of prompt, negative prompt, seed, model and parameters.
   `artifacts/` is gitignored, so history never bloats the repository.
 - `roktiles sheet --face <label>` renders a labelled contact sheet so
   candidates can be compared without a GUI.
-- `roktiles select <generation>` copies normalized 416×576 face art into
-  `assets/art/faces/`, writes a provenance manifest and rebuilds the atlas.
+- `roktiles select <generation>` writes the chosen art into
+  `assets/art/glyphs/` (RGBA glyph + derived height map, for transparent
+  layered output) or `assets/art/faces/` (retained painted faces), records a
+  provenance manifest and rebuilds the atlas.
 - `roktiles reset` drops a face back to the vector fallback.
 - Style presets (`porcelain`, `lacquer`, `ink`, `jade`, `enamel`, `minimal`)
   change the look only; the per-face subject sentence protects glyphs and pip
@@ -810,7 +817,10 @@ adds the tests that would have caught the bugs introduced by that milestone.
 - [x] Selected faces committed with a provenance manifest.
 - [x] Qwen-Image-Edit 2511 GGUF default workflow and style presets.
 - [x] Optional LoRA loading (4-step Lightning fast-batch recipe documented).
+- [x] 3D rounded-box tile mesh rendered at build time with SDF raymarching.
+- [x] Glyph albedo + height map pipeline (Qwen-Image-Layered provider).
 - [ ] Verify the 4-step Lightning LoRA path with a downloaded model.
+- [ ] Verify Qwen-Image-Layered end to end on this machine.
 - [~] Generate, review and select the full 42-face porcelain set (4/42).
 - [ ] Compare `lacquer`, `ink` and `jade` styles and sign off the final look.
 - [ ] Exercise the OpenRouter adapter with a real key and model.

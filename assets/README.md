@@ -9,8 +9,11 @@ All of `art/` is generated. Do not hand-edit any of it.
 | `art/tile-atlas.png` | 42-face atlas with the vector 2.5D tile body baked in |
 | `art/tile-atlas.json` | atlas cell/face metadata and face order |
 | `art/reference/*.png` | body-less vector face art used as generation references |
-| `art/faces/*.png` | selected generated face art (416×576) |
-| `art/faces/manifest.json` | provenance for each selected face |
+| `art/glyphs/*.png` | selected RGBA glyphs (transparent, 512×704) |
+| `art/glyphs/*.height.png` | derived height fields for the 3D face relief |
+| `art/glyphs/manifest.json` | provenance for each selected glyph |
+| `art/faces/*.png` | retained painted 2D faces (legacy fallback) |
+| `art/faces/manifest.json` | provenance for each retained face |
 
 ### Rebuild
 
@@ -18,10 +21,10 @@ All of `art/` is generated. Do not hand-edit any of it.
 make tiles
 ```
 
-`tools/RokMahjong.TileArtGen` draws the atlas and rewrites `art/reference/`.
-When `art/faces/<label>.png` exists it is drawn as the tile top face over the
-vector side and shadow; otherwise the vector symbol is used. Selected art is
-cropped to its tile bounds before it is written here.
+`tools/RokMahjong.TileArtGen` renders each cell as a real 3D tile: a rounded
+box raymarched with lighting, ambient occlusion and a soft shadow. It uses
+`art/glyphs/<label>.png` (RGBA) and `art/glyphs/<label>.height.png` when
+present, then a retained `art/faces/<label>.png`, then the vector symbol.
 
 ### Generate and choose face art
 

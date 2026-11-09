@@ -181,19 +181,7 @@ class ComfyUIProvider:
 
     def generate(self, request: GenerationRequest) -> GenerationOutput:
         options = request.options
-        upload = _post_multipart(
-            f"{self.base_url}/upload/image",
-            {"overwrite": "true"},
-            "image",
-            request.reference,
-        )
-        image_name = upload.get("name")
-        if not image_name:
-            raise ProviderError(f"ComfyUI upload returned no filename: {upload}")
-        subfolder = upload.get("subfolder") or ""
-        if subfolder:
-            image_name = f"{subfolder}/{image_name}"
-
+        image_name = upload_image(self.base_url, request.reference)
         workflow = build_workflow(
             image_name=image_name,
             prompt=request.prompt,
@@ -213,51 +201,12 @@ class ComfyUIProvider:
             lora_strength=float(options.get("lora_strength", 1.0)),
         )
 
-        client_id = uuid.uuid4().hex
-        queued = _request_json(
-            f"{self.base_url}/prompt", {"prompt": workflow, "client_id": client_id}
-        )
-        prompt_id = queued.get("prompt_id")
-        if not prompt_id:
-            raise ProviderError(f"ComfyUI rejected the workflow: {queued}")
-
-        deadline = time.monotonic() + config.COMFYUI_TIMEOUT
-        entry: dict | None = None
-        while time.monotonic() < deadline:
-            history = _request_json(f"{self.base_url}/history/{prompt_id}", timeout=30)
-            if prompt_id in history:
-                entry = history[prompt_id]
-                status = entry.get("status", {})
-                if status.get("status_str") == "error":
-                    raise ProviderError(
-                        f"ComfyUI generation failed: {status.get('messages')}"
-                    )
-                if status.get("completed") or entry.get("outputs"):
-                    break
-            time.sleep(1.0)
-        else:
-            raise ProviderError(
-                f"ComfyUI generation timed out after {config.COMFYUI_TIMEOUT}s"
-            )
-
-        images = (entry or {}).get("outputs", {}).get("15", {}).get("images") or []
+        prompt_id, entry = run_workflow(self.base_url, workflow)
+        images = output_images(entry, "15")
         if not images:
             raise ProviderError(f"ComfyUI produced no image: {entry}")
         image_info = images[0]
-        query = urllib.parse.urlencode(
-            {
-                "filename": image_info["filename"],
-                "subfolder": image_info.get("subfolder", ""),
-                "type": image_info.get("type", "output"),
-            }
-        )
-        try:
-            with urllib.request.urlopen(
-                f"{self.base_url}/view?{query}", timeout=60
-            ) as response:
-                data = response.read()
-        except urllib.error.HTTPError as error:  # pragma: no cover - network path
-            raise ProviderError(f"Could not download ComfyUI image: {error}") from error
+        data = download_image(self.base_url, image_info)
 
         return GenerationOutput(
             image=data,
@@ -279,3 +228,53 @@ class ComfyUIProvider:
                 "lora_strength": float(options.get("lora_strength", 1.0)),
             },
         )
+
+
+def upload_image(base_url: str, path: Path) -> str:
+    upload = _post_multipart(f"{base_url}/upload/image", {"overwrite": "true"}, "image", path)
+    name = upload.get("name")
+    if not name:
+        raise ProviderError(f"ComfyUI upload returned no filename: {upload}")
+    subfolder = upload.get("subfolder") or ""
+    return f"{subfolder}/{name}" if subfolder else name
+
+
+def run_workflow(base_url: str, workflow: dict) -> tuple[str, dict]:
+    client_id = uuid.uuid4().hex
+    queued = _request_json(f"{base_url}/prompt", {"prompt": workflow, "client_id": client_id})
+    prompt_id = queued.get("prompt_id")
+    if not prompt_id:
+        raise ProviderError(f"ComfyUI rejected the workflow: {queued}")
+
+    deadline = time.monotonic() + config.COMFYUI_TIMEOUT
+    while time.monotonic() < deadline:
+        history = _request_json(f"{base_url}/history/{prompt_id}", timeout=30)
+        if prompt_id in history:
+            entry = history[prompt_id]
+            status = entry.get("status", {})
+            if status.get("status_str") == "error":
+                raise ProviderError(f"ComfyUI generation failed: {status.get('messages')}")
+            if status.get("completed") or entry.get("outputs"):
+                return prompt_id, entry
+        time.sleep(1.0)
+
+    raise ProviderError(f"ComfyUI generation timed out after {config.COMFYUI_TIMEOUT}s")
+
+
+def output_images(entry: dict, node_id: str) -> list[dict]:
+    return (entry.get("outputs", {}).get(node_id, {}).get("images")) or []
+
+
+def download_image(base_url: str, image_info: dict) -> bytes:
+    query = urllib.parse.urlencode(
+        {
+            "filename": image_info["filename"],
+            "subfolder": image_info.get("subfolder", ""),
+            "type": image_info.get("type", "output"),
+        }
+    )
+    try:
+        with urllib.request.urlopen(f"{base_url}/view?{query}", timeout=120) as response:
+            return response.read()
+    except urllib.error.HTTPError as error:  # pragma: no cover - network path
+        raise ProviderError(f"Could not download ComfyUI image: {error}") from error

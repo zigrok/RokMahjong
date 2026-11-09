@@ -93,7 +93,11 @@ network:
 - the 42-face catalogue is complete and unique;
 - every face builds a prompt containing its own subject and the no-tile-body
   constraint;
-- the Qwen-Image-Edit workflow is fully wired (every node reference resolves);
+- the Qwen-Image-Edit and Qwen-Image-Layered workflows are fully wired (every
+  node reference resolves);
+- the layered provider picks the transparent foreground layer, not the opaque
+  background;
+- the derived height field tracks the glyph alpha;
 - history and selection round-trip through SQLite;
 - `apply` crops the tile out of its background, normalizes face art, writes the
   provenance manifest and `reset` removes it;

@@ -221,6 +221,8 @@ def _provider_options(args: argparse.Namespace) -> dict:
         "height": args.height,
         "lora": getattr(args, "lora", None) or config.COMFYUI_LORA or None,
         "lora_strength": getattr(args, "lora_strength", 1.0),
+        "layers": getattr(args, "layers", 2),
+        "layered_vae": config.COMFYUI_LAYERED_VAE,
     }
 
 
@@ -291,7 +293,7 @@ def cmd_select(args: argparse.Namespace) -> int:
         [generation.face for generation in chosen], build=not args.no_build
     )
     if written:
-        print(f"applied {len(written)} face(s) to {config.SELECTED_DIR.relative_to(config.REPO_ROOT)}")
+        print(f"applied {len(written)} face(s) to {config.ART_ROOT.relative_to(config.REPO_ROOT)}")
     return 0
 
 
@@ -389,6 +391,10 @@ def cmd_status(args: argparse.Namespace) -> int:
     generations = store.list_generations(limit=None)
     selections = store.selected_generations()
     references = list(config.REFERENCE_DIR.glob("*.png"))
+    glyph_files = [
+        path for path in config.GLYPH_DIR.glob("*.png") if not path.name.endswith(".height.png")
+    ]
+    legacy_files = list(config.LEGACY_FACE_DIR.glob("*.png"))
     missing_references = [
         face.label
         for face in face_catalog.FACES
@@ -399,6 +405,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"references:  {len(references)}/{len(face_catalog.FACES)}")
     if missing_references:
         print(f"  missing references: {', '.join(missing_references[:8])}… run `make tiles`")
+    print(f"glyphs:      {len(glyph_files)}/{len(face_catalog.FACES)} (RGBA + height)")
+    print(f"legacy:      {len(legacy_files)}/{len(face_catalog.FACES)} (painted 2D faces)")
     print(f"selected:    {len(selections)}/{len(face_catalog.FACES)}")
     print(f"comfyui:     {config.COMFYUI_URL}")
     print(f"openrouter:  {'key set' if config.OPENROUTER_API_KEY else 'no key (adapter disabled)'}")
@@ -434,8 +442,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if shutil.which("dotnet") is None:
         problems += 1
 
-    if args.provider == "comfyui":
-        provider = create_provider("comfyui", args.model, options=_provider_options(args))
+    if args.provider in ("comfyui", "layered"):
+        provider = create_provider(args.provider, args.model, options=_provider_options(args))
         try:
             stats = provider.health()  # type: ignore[attr-defined]
             system = stats.get("system", {})
@@ -444,6 +452,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             if devices:
                 device = devices[0]
                 print(f"     device: {device.get('name', '?')} ({device.get('type', '?')})")
+            print(f"     provider: {provider.name}")
             print(f"     unet: {provider.model}")
             print(f"     clip: {provider.clip}")
             print(f"     vae:  {provider.vae}")
@@ -500,6 +509,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--lora", default=None, help="ComfyUI LoRA filename (e.g. the 4-step Lightning LoRA)"
     )
     generate_parser.add_argument("--lora-strength", type=float, default=1.0)
+    generate_parser.add_argument(
+        "--layers", type=int, default=2, help="layer count for the layered provider"
+    )
     generate_parser.add_argument("--width", type=int, default=832)
     generate_parser.add_argument("--height", type=int, default=1152)
     generate_parser.add_argument("--extra", default="", help="extra prompt text")
@@ -575,6 +587,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser.add_argument("--shift", type=float, default=3.1)
     doctor_parser.add_argument("--lora", default=None)
     doctor_parser.add_argument("--lora-strength", type=float, default=1.0)
+    doctor_parser.add_argument("--layers", type=int, default=2)
     doctor_parser.add_argument("--width", type=int, default=832)
     doctor_parser.add_argument("--height", type=int, default=1152)
     doctor_parser.set_defaults(func=cmd_doctor)

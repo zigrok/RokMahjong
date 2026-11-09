@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from .base import GenerationOutput, GenerationRequest, Provider, ProviderError
 from .comfyui import ComfyUIProvider
+from .layered import LayeredProvider
 from .openrouter import OpenRouterProvider
 
-PROVIDERS = ("comfyui", "openrouter")
+PROVIDERS = ("comfyui", "layered", "openrouter")
 
 
 def create_provider(
@@ -23,6 +24,13 @@ def create_provider(
             vae=options.get("vae"),
             base_url=options.get("base_url"),
         )
+    if name == "layered":
+        return LayeredProvider(
+            model,
+            clip=options.get("clip"),
+            vae=options.get("layered_vae"),
+            base_url=options.get("base_url"),
+        )
     if name == "openrouter":
         return OpenRouterProvider(
             model,
@@ -34,6 +42,7 @@ def create_provider(
 
 __all__ = [
     "ComfyUIProvider",
+    "LayeredProvider",
     "GenerationOutput",
     "GenerationRequest",
     "OpenRouterProvider",

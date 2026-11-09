@@ -163,17 +163,20 @@ Full details: [`docs/testing.md`](testing.md).
 
 ## Tile art
 
-The 42 tile faces are AI-generated and chosen through a local-first pipeline.
-The generator emits body-less reference art for every face, and
-`tools/tile-pipeline` sends it to ComfyUI (Qwen-Image-Edit 2511 by default) or
-an optional OpenRouter image model. Every generation is kept with its prompt,
-seed and parameters; selecting one updates the face art the game ships with.
-The vector 2.5D body, bevel and shadow are always drawn by
-`tools/RokMahjong.TileArtGen`, so tiles stay physically consistent.
+Tiles are real 3D meshes: `TileRenderer` raymarches a rounded-box tile at build
+time with perspective, lighting, ambient occlusion and a soft shadow. The 42
+faces are AI-generated and chosen through a local-first pipeline. The generator
+emits body-less reference art for every face, and `tools/tile-pipeline` sends it
+to ComfyUI (Qwen-Image-Edit 2511 for painted tiles, Qwen-Image-Layered for
+transparent RGBA glyphs) or an optional OpenRouter image model. Every generation
+is kept with its prompt, seed and parameters; selecting one updates the texture
+the game ships with. Glyphs carry a height map, so the symbol picks up real
+relief shading on the 3D face.
 
 ```bash
 make tilegen ARGS="doctor"                                # check ComfyUI + references
-make tilegen ARGS="generate --face C1 --style porcelain"  # generate one face
+make tilegen ARGS="generate --face C1 --style porcelain"  # painted tile
+make tilegen ARGS="generate --face C1 --provider layered"  # RGBA glyph
 make tilegen ARGS="history --face C1"                     # list past generations
 make tilegen ARGS="select <generation-id>"                # apply + rebuild atlas
 make tilegen ARGS="reset --face C1"                       # back to vector art

@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 
 import pytest
 from PIL import Image, ImageDraw
 
-from roktiles import applier, config, faces, prompts, store
+from roktiles import applier, config, faces, glyphs, prompts, store
 from roktiles.providers.base import ProviderError
 from roktiles.providers.comfyui import build_workflow
+from roktiles.providers.layered import build_layered_workflow
 from roktiles.providers.openrouter import OpenRouterProvider
 
 
@@ -87,6 +89,60 @@ def test_comfyui_workflow_can_apply_a_lora() -> None:
     assert workflow["4"]["inputs"]["model"] == ["16", 0]
 
 
+def test_layered_workflow_splits_layers_into_a_batch() -> None:
+    workflow = build_layered_workflow(
+        image_name="C1.png",
+        prompt="separate the glyph from the background",
+        negative_prompt="",
+        seed=3,
+        steps=20,
+        cfg=2.5,
+        layers=2,
+        unet="layered.safetensors",
+        clip="clip.safetensors",
+        vae="layered_vae.safetensors",
+        shift=1.0,
+        filename_prefix="roktiles_layered",
+    )
+    assert workflow["6"]["class_type"] == "EmptyQwenImageLayeredLatentImage"
+    assert workflow["6"]["inputs"]["layers"] == 2
+    assert workflow["6"]["inputs"]["width"] == ["5", 0]
+    assert workflow["13"]["inputs"]["latent_image"] == ["6", 0]
+    assert workflow["15"]["class_type"] == "LatentCutToBatch"
+    assert workflow["17"]["class_type"] == "SaveImage"
+    for node in workflow.values():
+        for value in node["inputs"].values():
+            if isinstance(value, list):
+                assert value[0] in workflow
+
+
+def _png(image: Image.Image) -> bytes:
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_choose_glyph_layer_picks_the_foreground() -> None:
+    background = Image.new("RGBA", (64, 64), (250, 245, 220, 255))
+    foreground = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(foreground).rectangle((16, 16, 48, 48), fill=(180, 40, 60, 255))
+
+    index, best, stats = glyphs.choose_glyph_layer([_png(background), _png(foreground)])
+    assert index == 1
+    assert best.index == 1
+    assert best.transparency > 0.5
+    assert len(stats) == 2
+
+
+def test_derive_height_tracks_the_glyph_alpha() -> None:
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).rectangle((16, 16, 48, 48), fill=(180, 40, 60, 255))
+    height = glyphs.derive_height(image)
+    assert height.mode == "L"
+    assert height.getpixel((32, 32)) > 200
+    assert height.getpixel((2, 2)) < 40
+
+
 def test_openrouter_extracts_a_base64_image() -> None:
     payload = b"\x89PNG\r\n\x1a\nfake"
     body = {
@@ -139,8 +195,7 @@ def test_store_history_and_selection_roundtrip(tmp_path, monkeypatch) -> None:
     assert store.list_generations(face="C1")[0].id == "g-test"
 
     store.set_selection("C1", "g-test")
-    selections = store.selected_generations()
-    assert selections["C1"].id == "g-test"
+    assert store.selected_generations()["C1"].id == "g-test"
 
     store.clear_selection("C1")
     assert store.selected_generations() == {}
@@ -148,8 +203,7 @@ def test_store_history_and_selection_roundtrip(tmp_path, monkeypatch) -> None:
 
 def test_crop_to_artwork_crops_the_background_margin() -> None:
     image = Image.new("RGB", (400, 520), (250, 245, 215))
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((60, 50, 340, 470), outline=(150, 110, 40), width=12)
+    ImageDraw.Draw(image).rectangle((60, 50, 340, 470), outline=(150, 110, 40), width=12)
     trimmed = applier.crop_to_artwork(image, inset=0.02)
     assert trimmed.size[0] < 300
     assert trimmed.size[1] < 430
@@ -160,19 +214,24 @@ def test_crop_to_artwork_keeps_full_bleed_art() -> None:
     assert applier.crop_to_artwork(image).size == (400, 520)
 
 
-def test_apply_selections_writes_face_and_manifest(tmp_path, monkeypatch) -> None:
+def _patch_asset_paths(tmp_path, monkeypatch):
     repo = tmp_path / "repo"
+    art = repo / "assets" / "art"
     history = repo / "artifacts" / "tile-pipeline" / "history" / "r-test"
     history.mkdir(parents=True)
-    selected = repo / "assets" / "art" / "faces"
     monkeypatch.setattr(config, "DB_PATH", repo / "history.sqlite3")
     monkeypatch.setattr(config, "REPO_ROOT", repo)
-    monkeypatch.setattr(config, "SELECTED_DIR", selected)
-    monkeypatch.setattr(config, "SELECTED_MANIFEST", selected / "manifest.json")
+    monkeypatch.setattr(config, "ART_ROOT", art)
+    monkeypatch.setattr(config, "REFERENCE_DIR", art / "reference")
+    monkeypatch.setattr(config, "GLYPH_DIR", art / "glyphs")
+    monkeypatch.setattr(config, "GLYPH_MANIFEST", art / "glyphs" / "manifest.json")
+    monkeypatch.setattr(config, "LEGACY_FACE_DIR", art / "faces")
+    monkeypatch.setattr(config, "SELECTED_DIR", art / "faces")
+    monkeypatch.setattr(config, "SELECTED_MANIFEST", art / "faces" / "manifest.json")
+    return repo, history, art
 
-    source = history / "C1_g-test.png"
-    Image.new("RGB", (832, 1152), (240, 230, 200)).save(source)
 
+def _add_generation(history, source, params=None):
     store.create_run("r-test", "comfyui", "qwen", "porcelain", {})
     store.add_generation(
         generation_id="g-test",
@@ -184,21 +243,61 @@ def test_apply_selections_writes_face_and_manifest(tmp_path, monkeypatch) -> Non
         prompt="p",
         negative_prompt="n",
         seed=42,
-        params={"provider": "comfyui", "model": "qwen", "style": "porcelain"},
+        params=params or {"provider": "comfyui", "model": "qwen", "style": "porcelain"},
     )
     store.set_selection("C1", "g-test")
+
+
+def test_apply_selections_writes_a_legacy_face_and_manifest(tmp_path, monkeypatch) -> None:
+    _repo, history, art = _patch_asset_paths(tmp_path, monkeypatch)
+    source = history / "C1_g-test.png"
+    Image.new("RGB", (832, 1152), (240, 230, 200)).save(source)
+    _add_generation(history, source)
 
     written = applier.apply_selections(build=False)
     assert written == ["C1"]
 
-    with Image.open(selected / "C1.png") as image:
+    with Image.open(art / "faces" / "C1.png") as image:
         assert image.size == config.SELECTED_FACE_SIZE
 
-    manifest = json.loads((selected / "manifest.json").read_text())
+    manifest = json.loads((art / "faces" / "manifest.json").read_text())
+    assert manifest["C1"]["kind"] == "legacy-face"
     assert manifest["C1"]["generation"] == "g-test"
-    assert manifest["C1"]["style"] == "porcelain"
-    assert manifest["C1"]["seed"] == 42
 
     removed = applier.remove_faces(["C1"], build=False)
     assert removed == ["C1"]
-    assert not (selected / "C1.png").exists()
+    assert not (art / "faces" / "C1.png").exists()
+
+
+def test_apply_selections_writes_a_glyph_and_height_map(tmp_path, monkeypatch) -> None:
+    _repo, history, art = _patch_asset_paths(tmp_path, monkeypatch)
+    source = history / "C1_g-test.png"
+    glyph_image = Image.new("RGBA", (512, 704), (0, 0, 0, 0))
+    ImageDraw.Draw(glyph_image).rectangle((120, 200, 380, 500), fill=(180, 40, 60, 255))
+    glyph_image.save(source)
+    _add_generation(
+        history,
+        source,
+        params={
+            "provider": "layered",
+            "model": "layered",
+            "style": "porcelain",
+            "glyph_layer": 1,
+        },
+    )
+
+    written = applier.apply_selections(build=False)
+    assert written == ["C1"]
+
+    glyph_path = art / "glyphs" / "C1.png"
+    assert glyph_path.is_file()
+    with Image.open(glyph_path) as image:
+        assert image.mode == "RGBA"
+        assert image.size == config.GLYPH_SIZE
+        assert image.getpixel((0, 0))[3] == 0
+    assert (art / "glyphs" / "C1.height.png").is_file()
+    assert not (art / "faces" / "C1.png").exists()
+
+    manifest = json.loads((art / "glyphs" / "manifest.json").read_text())
+    assert manifest["C1"]["kind"] == "glyph"
+    assert manifest["C1"]["layer"] == 1

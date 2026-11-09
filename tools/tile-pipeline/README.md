@@ -8,25 +8,28 @@ with.
 assets/art/reference/*.png     body-less vector reference art (committed)
         │
         ▼
-roktiles generate              ComfyUI (Qwen-Image-Edit 2511) or OpenRouter
+roktiles generate              ComfyUI edit  → opaque painted tile
+                               layered       → transparent RGBA glyph
+                               openrouter    → hosted image model
         │
         ▼
 artifacts/tile-pipeline/       history: PNGs + SQLite index (gitignored)
         │
         ▼
-roktiles select <generation>   pick one, copy into assets/art/faces/
+roktiles select <generation>   RGBA + height → assets/art/glyphs/
+                               opaque face   → assets/art/faces/ (retained)
         │
         ▼
-make tiles                     rebuild assets/art/tile-atlas.png
+make tiles                     3D raymarched tile atlas
 ```
 
-Generated art fills the tile's top face, including the frame the model paints.
-The vector 2.5D side, bevel and shadow are still drawn behind it, and faces
-without a selection fall back to the vector symbol.
+Tiles are real 3D meshes. `TileRenderer` (in `RokMahjong.TileArtGen`)
+raymarches a rounded-box tile with perspective, key/fill lighting, SDF ambient
+occlusion and a soft shadow. The pipeline only supplies the top-face texture,
+so the mesh, bevel and body stay consistent across every face.
 
-Selected art is cropped to its tile bounds before it is committed, so
-the model's frame lines up with the atlas cell instead of floating in a
-background margin.
+Selected art is cropped to its tile bounds (opaque faces) or kept as a
+transparent layer (glyphs) before it is committed.
 
 ## Requirements
 
@@ -78,12 +81,40 @@ Models are selected with environment variables:
 | `ROKTILES_CLIP` | `qwen_2.5_vl_7b_fp8_scaled.safetensors` |
 | `ROKTILES_VAE` | `qwen_image_vae.safetensors` |
 | `ROKTILES_LORA` | empty (no LoRA) |
+| `ROKTILES_LAYERED_UNET` | `qwen_image_layered_fp8mixed.safetensors` |
+| `ROKTILES_LAYERED_VAE` | `qwen_image_layered_vae.safetensors` |
 | `ROKTILES_TIMEOUT` | `1800` seconds |
 
 The default graph is the official *Image Edit (Qwen 2511)* blueprint: GGUF UNet
 loader, Qwen 2.5-VL text encoder, AuraFlow sampling shift, CFGNorm, reference
 latents, and an `euler`/`simple` sampler at CFG 4.0 (10 steps by default, 20 for
 maximum fidelity).
+
+## Transparent glyphs (Qwen-Image-Layered)
+
+`--provider layered` runs the official *Image to Layers* graph. It takes the
+same body-less reference, splits it into two RGBA layers, and keeps the
+foreground glyph layer (the fully opaque background layer is discarded). The
+result is a transparent glyph that the 3D tile can wear directly.
+
+```bash
+uv run roktiles generate --face C1 --provider layered --style porcelain
+```
+
+Models live in `models/diffusion_models/qwen_image_layered_fp8mixed.safetensors`
+and `models/vae/qwen_image_layered_vae.safetensors` (Comfy-Org). The provider is
+the only one that returns real alpha; the 2511 edit model decodes RGB.
+
+Selecting a transparent generation writes:
+
+- `assets/art/glyphs/<label>.png` — the RGBA glyph, 512×704.
+- `assets/art/glyphs/<label>.height.png` — a soft height field derived from the
+  glyph alpha. Drop in a hand-authored height map with the same name to
+  override it.
+
+Selecting an opaque generation keeps the older path and writes
+`assets/art/faces/<label>.png` instead, so previously generated faces stay
+usable.
 
 ## Styles
 
@@ -100,7 +131,7 @@ Add `--extra "…"` to append art direction to a single run.
 | `roktiles faces` | list all 42 faces and what is selected |
 | `roktiles styles` | list style presets |
 | `roktiles prompt C1 --style ink` | print the exact prompt and negative |
-| `roktiles generate …` | generate one face, a group, or all 42 |
+| `roktiles generate …` | generate one face, a group, or all 42 (`--provider layered` for RGBA) |
 | `roktiles history` | list generations, `*` marks the selection |
 | `roktiles sheet --face C1 --open` | contact sheet of candidates |
 | `roktiles show <id> --open` | print a generation's path and prompt |

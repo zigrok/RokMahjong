@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
+using RokMahjong.TileArtGen;
 using SkiaSharp;
 
 const int CellWidth = 256;
@@ -14,7 +16,8 @@ const int ReferenceScale = 4;
 var root = FindRoot();
 var outputDirectory = Path.Combine(root, "assets", "art");
 var referenceDirectory = Path.Combine(outputDirectory, "reference");
-var selectedDirectory = Path.Combine(outputDirectory, "faces");
+var glyphDirectory = Path.Combine(outputDirectory, "glyphs");
+var legacyFaceDirectory = Path.Combine(outputDirectory, "faces");
 var fontPath = Path.Combine(root, "assets", "fonts", "NotoSerifCJKsc-Subset.otf");
 Directory.CreateDirectory(outputDirectory);
 Directory.CreateDirectory(referenceDirectory);
@@ -33,22 +36,28 @@ var blue = new SKColor(39, 77, 138);
 var gold = new SKColor(184, 138, 52);
 
 var faces = BuildFaces();
-var generated = 0;
+var withGenerated = 0;
 for (var index = 0; index < faces.Count; index++)
 {
     var face = faces[index];
-    var selectedFace = LoadSelectedFace(selectedDirectory, face.Label);
-    if (selectedFace is not null) generated++;
+    using var reference = RenderReference(face, typeface);
+    WriteReference(reference, face);
 
-    var column = index % Columns;
-    var row = index / Columns;
-    canvas.Save();
-    canvas.Translate(column * CellWidth, row * CellHeight);
-    DrawTile(canvas, face, typeface, selectedFace);
-    canvas.Restore();
-    selectedFace?.Dispose();
+    var (glyph, hasAlpha, height) = LoadGlyphSource(glyphDirectory, legacyFaceDirectory, face, reference);
+    if (!ReferenceEquals(glyph, reference)) withGenerated++;
 
-    WriteReference(face, typeface);
+    var cell = TileRenderer.RenderCell(
+        CellWidth,
+        CellHeight,
+        FaceLeft,
+        FaceTop,
+        FaceWidth,
+        FaceHeight,
+        ToGlyphTexture(glyph, hasAlpha, height));
+    DrawCell(canvas, index, cell);
+
+    if (!ReferenceEquals(glyph, reference)) glyph.Dispose();
+    height?.Dispose();
 }
 
 using (var image = SKImage.FromBitmap(bitmap))
@@ -73,7 +82,7 @@ File.WriteAllText(
     Path.Combine(outputDirectory, "tile-atlas.json"),
     JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
 
-Console.WriteLine($"Wrote {faces.Count} tile faces to {outputDirectory} ({generated} from generated face art).");
+Console.WriteLine($"Wrote {faces.Count} 3D tile faces to {outputDirectory} ({withGenerated} from generated glyphs or legacy faces).");
 Console.WriteLine($"Wrote {faces.Count} body-less reference faces to {referenceDirectory}.");
 
 static string FindRoot()
@@ -106,15 +115,9 @@ static List<TileFaceSpec> BuildFaces()
     return faces;
 }
 
-static SKBitmap? LoadSelectedFace(string directory, string label)
+SKBitmap RenderReference(TileFaceSpec face, SKTypeface typeface)
 {
-    var path = Path.Combine(directory, $"{label}.png");
-    return File.Exists(path) ? SKBitmap.Decode(path) : null;
-}
-
-void WriteReference(TileFaceSpec face, SKTypeface typeface)
-{
-    using var reference = new SKBitmap(new SKImageInfo(
+    var reference = new SKBitmap(new SKImageInfo(
         FaceWidth * ReferenceScale,
         FaceHeight * ReferenceScale,
         SKColorType.Rgba8888,
@@ -128,84 +131,140 @@ void WriteReference(TileFaceSpec face, SKTypeface typeface)
     referenceCanvas.ClipRect(artRect);
     DrawFace(referenceCanvas, face, artRect, typeface);
     referenceCanvas.Restore();
+    return reference;
+}
 
+void WriteReference(SKBitmap reference, TileFaceSpec face)
+{
     using var image = SKImage.FromBitmap(reference);
     using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
     using var stream = File.Create(Path.Combine(referenceDirectory, $"{face.Label}.png"));
     encoded.SaveTo(stream);
 }
 
-void DrawTile(SKCanvas canvas, TileFaceSpec face, SKTypeface typeface, SKBitmap? selectedFace)
+static (SKBitmap Glyph, bool HasAlpha, SKBitmap? Height) LoadGlyphSource(
+    string glyphDirectory,
+    string legacyFaceDirectory,
+    TileFaceSpec face,
+    SKBitmap reference)
 {
+    var glyphPath = Path.Combine(glyphDirectory, $"{face.Label}.png");
+    if (File.Exists(glyphPath))
+    {
+        var glyph = DecodeUnpremultiplied(glyphPath);
+        if (glyph is not null)
+        {
+            var height = LoadHeight(glyphDirectory, face.Label);
+            return (glyph, true, height);
+        }
+    }
+
+    var legacyPath = Path.Combine(legacyFaceDirectory, $"{face.Label}.png");
+    if (File.Exists(legacyPath))
+    {
+        var legacy = CropInnerArt(legacyPath);
+        if (legacy is not null) return (legacy, false, null);
+    }
+
+    return (reference, false, null);
+}
+
+static SKBitmap? LoadHeight(string directory, string label)
+{
+    var path = Path.Combine(directory, $"{label}.height.png");
+    return File.Exists(path) ? DecodeUnpremultiplied(path) : null;
+}
+
+static SKBitmap? DecodeUnpremultiplied(string path)
+{
+    using var source = SKBitmap.Decode(path);
+    if (source is null) return null;
+    var converted = new SKBitmap(new SKImageInfo(
+        source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+    using var convertedCanvas = new SKCanvas(converted);
+    convertedCanvas.Clear(SKColors.Transparent);
+    using var paint = new SKPaint { IsAntialias = true };
+    convertedCanvas.DrawBitmap(
+        source,
+        new SKRect(0, 0, source.Width, source.Height),
+        new SKRect(0, 0, source.Width, source.Height),
+        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
+        paint);
+    return converted;
+}
+
+static SKBitmap? CropInnerArt(string path)
+{
+    using var source = SKBitmap.Decode(path);
+    if (source is null) return null;
+    var left = source.Width * 28f / FaceWidth;
+    var top = source.Height * 24f / FaceHeight;
+    var right = source.Width * (FaceWidth - 28f) / FaceWidth;
+    var bottom = source.Height * (FaceHeight - 24f) / FaceHeight;
+    var width = Math.Max(1, (int)MathF.Round(right - left));
+    var height = Math.Max(1, (int)MathF.Round(bottom - top));
+    var cropped = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+    using var croppedCanvas = new SKCanvas(cropped);
+    croppedCanvas.Clear(SKColors.Transparent);
+    using var paint = new SKPaint { IsAntialias = true };
+    croppedCanvas.DrawBitmap(
+        source,
+        new SKRect(left, top, right, bottom),
+        new SKRect(0, 0, width, height),
+        new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
+        paint);
+    return cropped;
+}
+
+static GlyphTexture ToGlyphTexture(SKBitmap bitmap, bool hasAlpha, SKBitmap? height)
+{
+    var rgba = new byte[bitmap.Width * bitmap.Height * 4];
+    var rowBytes = bitmap.RowBytes;
+    for (var y = 0; y < bitmap.Height; y++)
+        Marshal.Copy(IntPtr.Add(bitmap.GetPixels(), y * rowBytes), rgba, y * bitmap.Width * 4, bitmap.Width * 4);
+
+    byte[]? heightBytes = null;
+    if (height is not null && height.Width == bitmap.Width && height.Height == bitmap.Height)
+    {
+        heightBytes = new byte[bitmap.Width * bitmap.Height];
+        var heightRowBytes = height.RowBytes;
+        var row = new byte[height.Width * 4];
+        for (var y = 0; y < height.Height; y++)
+        {
+            Marshal.Copy(IntPtr.Add(height.GetPixels(), y * heightRowBytes), row, 0, row.Length);
+            for (var x = 0; x < height.Width; x++) heightBytes[y * height.Width + x] = row[x * 4];
+        }
+    }
+
+    return new GlyphTexture(bitmap.Width, bitmap.Height, rgba, hasAlpha, heightBytes);
+}
+
+void DrawCell(SKCanvas canvas, int index, byte[] cell)
+{
+    var column = index % Columns;
+    var row = index / Columns;
     var faceRect = new SKRect(FaceLeft, FaceTop, FaceLeft + FaceWidth, FaceTop + FaceHeight);
+
+    canvas.Save();
+    canvas.Translate(column * CellWidth, row * CellHeight);
 
     using (var shadow = new SKPaint
            {
-               Color = new SKColor(0, 0, 0, 75),
+               Color = new SKColor(0, 0, 0, 70),
                IsAntialias = true,
-               MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 7),
+               MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 8),
            })
-        canvas.DrawRoundRect(new SKRect(faceRect.Left + 10, faceRect.Top + 12, faceRect.Right + 10, faceRect.Bottom + 12), 14, 14, shadow);
+        canvas.DrawRoundRect(
+            new SKRect(faceRect.Left + 8, faceRect.Top + 14, faceRect.Right + 10, faceRect.Bottom + 14),
+            16,
+            16,
+            shadow);
 
-    using (var side = new SKPaint { Color = new SKColor(194, 166, 117), IsAntialias = true })
-        canvas.DrawRoundRect(new SKRect(faceRect.Left + 7, faceRect.Top + 9, faceRect.Right + 7, faceRect.Bottom + 9), 14, 14, side);
+    var info = new SKImageInfo(CellWidth, CellHeight, SKColorType.Rgba8888, SKAlphaType.Premul);
+    using (var image = SKImage.FromPixelCopy(info, cell, CellWidth * 4))
+    using (var paint = new SKPaint { IsAntialias = true })
+        canvas.DrawImage(image, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint);
 
-    if (selectedFace is not null)
-    {
-        canvas.Save();
-        canvas.ClipRoundRect(new SKRoundRect(faceRect, 14, 14), SKClipOperation.Intersect, true);
-        using var bitmapPaint = new SKPaint { IsAntialias = true };
-        canvas.DrawBitmap(
-            selectedFace,
-            new SKRect(0, 0, selectedFace.Width, selectedFace.Height),
-            faceRect,
-            new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
-            bitmapPaint);
-        canvas.Restore();
-        return;
-    }
-
-    using (var gradient = SKShader.CreateLinearGradient(
-        new SKPoint(faceRect.Left, faceRect.Top),
-        new SKPoint(faceRect.Left, faceRect.Bottom),
-        new[] { new SKColor(255, 252, 241), new SKColor(240, 226, 196) },
-        null,
-        SKShaderTileMode.Clamp))
-    using (var facePaint = new SKPaint { Shader = gradient, IsAntialias = true })
-        canvas.DrawRoundRect(faceRect, 14, 14, facePaint);
-
-    using (var border = new SKPaint
-           {
-               Color = new SKColor(197, 162, 88),
-               Style = SKPaintStyle.Stroke,
-               StrokeWidth = 2.5f,
-               IsAntialias = true,
-           })
-        canvas.DrawRoundRect(faceRect, 14, 14, border);
-
-    var innerRect = new SKRect(faceRect.Left + 10, faceRect.Top + 10, faceRect.Right - 10, faceRect.Bottom - 10);
-    using (var inner = new SKPaint
-           {
-               Color = new SKColor(217, 190, 132),
-               Style = SKPaintStyle.Stroke,
-               StrokeWidth = 1.2f,
-               IsAntialias = true,
-           })
-        canvas.DrawRoundRect(innerRect, 9, 9, inner);
-
-    using (var highlight = new SKPaint
-           {
-               Color = new SKColor(255, 255, 255, 190),
-               Style = SKPaintStyle.Stroke,
-               StrokeWidth = 1.2f,
-               IsAntialias = true,
-           })
-        canvas.DrawLine(faceRect.Left + 18, faceRect.Top + 4, faceRect.Right - 22, faceRect.Top + 4, highlight);
-
-    var artRect = new SKRect(faceRect.Left + 28, faceRect.Top + 24, faceRect.Right - 28, faceRect.Bottom - 24);
-    canvas.Save();
-    canvas.ClipRect(artRect);
-    DrawFace(canvas, face, artRect, typeface);
     canvas.Restore();
 }
 

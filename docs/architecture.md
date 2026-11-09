@@ -393,11 +393,14 @@ flowchart LR
 ```mermaid
 flowchart LR
     artTool[RokMahjong.TileArtGen<br/>SkiaSharp] --> reference[tile face references<br/>body-less PNGs]
-    reference --> pipeline[roktiles CLI<br/>ComfyUI / OpenRouter]
+    reference --> pipeline[roktiles CLI<br/>ComfyUI / Layered / OpenRouter]
     pipeline --> history[(artifacts history<br/>PNG + SQLite)]
-    pipeline --> selected[selected faces<br/>assets/art/faces]
-    selected --> artTool
-    artTool --> atlasPng[tile-atlas.png]
+    pipeline --> glyphs[glyph RGBA + height<br/>assets/art/glyphs]
+    pipeline --> legacy[retained painted faces<br/>assets/art/faces]
+    glyphs --> artTool
+    legacy --> artTool
+    artTool --> raymarch[TileRenderer<br/>3D mesh raymarch]
+    raymarch --> atlasPng[tile-atlas.png]
     artTool --> atlasJson[tile-atlas.json<br/>cell/face/depth metadata]
     atlasPng --> mgcb[RokMahjong.Content MGCB]
     atlasJson --> mgcb
@@ -411,8 +414,8 @@ flowchart LR
 ```
 
 - The atlas generator emits body-less reference art for all 42 faces, then
-  composites selected generated faces back into the vector 2.5D body on the
-  next build.
+  renders a 3D rounded-box tile mesh per face, textured with the selected RGBA
+  glyph and its height map.
 - `roktiles` owns generation history (gitignored) and selection state; only the
   selected faces and their manifest are committed.
 - Generated art and metadata are checked in so runtime builds do not need the

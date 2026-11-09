@@ -18,7 +18,10 @@ def _find_repo_root(start: Path) -> Path:
 REPO_ROOT = _find_repo_root(Path(__file__).resolve())
 ART_ROOT = REPO_ROOT / "assets" / "art"
 REFERENCE_DIR = ART_ROOT / "reference"
-SELECTED_DIR = ART_ROOT / "faces"
+GLYPH_DIR = ART_ROOT / "glyphs"
+GLYPH_MANIFEST = GLYPH_DIR / "manifest.json"
+LEGACY_FACE_DIR = ART_ROOT / "faces"
+SELECTED_DIR = LEGACY_FACE_DIR
 SELECTED_MANIFEST = SELECTED_DIR / "manifest.json"
 ATLAS_DIR = ART_ROOT
 GENERATOR_PROJECT = REPO_ROOT / "tools" / "RokMahjong.TileArtGen"
@@ -37,6 +40,12 @@ COMFYUI_CLIP = os.environ.get(
 )
 COMFYUI_VAE = os.environ.get("ROKTILES_VAE", "qwen_image_vae.safetensors")
 COMFYUI_LORA = os.environ.get("ROKTILES_LORA", "")
+COMFYUI_LAYERED_UNET = os.environ.get(
+    "ROKTILES_LAYERED_UNET", "qwen_image_layered_fp8mixed.safetensors"
+)
+COMFYUI_LAYERED_VAE = os.environ.get(
+    "ROKTILES_LAYERED_VAE", "qwen_image_layered_vae.safetensors"
+)
 COMFYUI_TIMEOUT = int(os.environ.get("ROKTILES_TIMEOUT", "1800"))
 
 OPENROUTER_BASE_URL = os.environ.get(
@@ -48,8 +57,9 @@ OPENROUTER_MODEL = os.environ.get(
 )
 
 SELECTED_FACE_SIZE = (416, 576)
+GLYPH_SIZE = (512, 704)
 
 
 def ensure_directories() -> None:
-    for directory in (REFERENCE_DIR, SELECTED_DIR, HISTORY_DIR):
+    for directory in (REFERENCE_DIR, GLYPH_DIR, SELECTED_DIR, HISTORY_DIR):
         directory.mkdir(parents=True, exist_ok=True)
